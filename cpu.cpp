@@ -2,8 +2,12 @@
  * CPU : 6502
  */
 
+
+
+
 #include <iostream>
 #include <vector>
+#include "cpu.h"
 
 class CPU6502 {
 	public: 
@@ -52,30 +56,63 @@ class RAM {
 		}
 };
 
-/*
-* for now i dont see any use of creating a class for different addressing
-* modes bc in older chips different addressing modes were predefined in 
-* the opcodes itself.
-*/
-class Opcodes {
 
-	u_int8_t ADC();	u_int8_t AND();	u_int8_t ASL();	u_int8_t BCC();
-	u_int8_t BCS();	u_int8_t BEQ();	u_int8_t BIT();	u_int8_t BMI();
-	u_int8_t BNE();	u_int8_t BPL();	u_int8_t BRK();	u_int8_t BVC();
-	u_int8_t BVS();	u_int8_t CLC();	u_int8_t CLD();	u_int8_t CLI();
-	u_int8_t CLV();	u_int8_t CMP();	u_int8_t CPX();	u_int8_t CPY();
-	u_int8_t DEC();	u_int8_t DEX();	u_int8_t DEY();	u_int8_t EOR();
-	u_int8_t INC();	u_int8_t INX();	u_int8_t INY();	u_int8_t JMP();
-	u_int8_t JSR();	u_int8_t LDA();	u_int8_t LDX();	u_int8_t LDY();
-	u_int8_t LSR();	u_int8_t NOP();	u_int8_t ORA();	u_int8_t PHA();
-	u_int8_t PHP();	u_int8_t PLA();	u_int8_t PLP();	u_int8_t ROL();
-	u_int8_t ROR();	u_int8_t RTI();	u_int8_t RTS();	u_int8_t SBC();
-	u_int8_t SEC();	u_int8_t SED();	u_int8_t SEI();	u_int8_t STA();
-	u_int8_t STX();	u_int8_t STY();	u_int8_t TAX();	u_int8_t TAY();
-	u_int8_t TSX();	u_int8_t TXA();	u_int8_t TXS();	u_int8_t TYA();
 
-	u_int8_t XXX(); // Placeholder for illegal opcode
+class AddressingModes{
+	u_int8_t IMP();	u_int8_t IMM();	
+	u_int8_t ZP0();	u_int8_t ZPX();	
+	u_int8_t ZPY();	u_int8_t REL();
+	u_int8_t ABS();	u_int8_t ABX();	
+	u_int8_t ABY();	u_int8_t IND();	
+	u_int8_t IZX();	u_int8_t IZY();
 };
+
+u_int8_t  AddressingModes::IMP() {  // Implied is just one byte instructions
+	PC++;
+
+}
+
+u_int8_t AddressingModes::IMM() {   // in assemble LDA  #$42  , uses # before value, loads A with hex val 42
+																		// depending on the addressing mode of LDA it will have differernt opcodes.	
+	PC+=2;	
+
+}
+
+
+/*
+* in 6502 the pages are indexed using the upper byte and the offset is the lower byte.
+*/
+u_int8_t AddressingModes::ZP0() {  // its just the first page. operand is offeset of ZP
+
+	PC+=2;
+
+
+}
+// ZPX and ZPY are zero page indexed with contents of X and Y register
+
+// similarly with ABX and ABY , some address then offset with X and Y reg
+
+u_int8_t AddressingModes::IND() { // indirect mode is pointer only for jumps
+																	//  jmp ($2000) : jumps to the location pointed by 
+																	// values of address $2000 and $2001. with val of 2001 being upper byte
+
+}   
+
+u_int8_t AddressingModes::IZX() {  // zero page offset + x reg value as pointer.
+																		// adding first and then dereference
+
+}
+
+u_int8_t  AddressingModes::IZY() { // Post indexed mode first derefernce than add Y 
+																		// only works with Y reg
+
+}
+
+u_int8_t  AddressingModes::REL() { // relative wrt PC but signed 2s compliment 
+																		// max branch possible 127 bytes
+																		// remember to minus the PC -1 before adding offset.
+
+}
 
 /*
 * currently clock has no functionality apart from keeping 
@@ -88,3 +125,10 @@ class Clock {
 		u_int64_t clock_cycles = 0;
 
 };
+
+// reset , interrrupt request, nmi these signals are async and need to be checked.
+
+
+
+// theory about the pages in 6502 and the need of an additional clk cycle if
+// the page changes.

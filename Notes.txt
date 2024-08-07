@@ -1,0 +1,11 @@
+
+
+there are two ways i can make the 6502 emulator work :
+
+(1) by keeping the opcodes as hex codes : and by using hex code 
+		i dont have to worry about the addressing mode of each instruction.
+
+(2) or by keeping the assembly as strings but than i need addressing modes
+		to parse properly.	
+
+(3)  LDA $31F6 is stored as three bytes in memory, $AD $F6 $31... low byte is stored first.
