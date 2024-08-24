@@ -9,3 +9,28 @@ there are two ways i can make the 6502 emulator work :
 		to parse properly.	
 
 (3)  LDA $31F6 is stored as three bytes in memory, $AD $F6 $31... low byte is stored first.
+
+
+CPU : 
+	instructions :
+		the thing here is that in 6502 unlike 8085 where the addressing modes where incorporated
+		in the opcode like in the name itself (e.g. LDA, LDI) etc 
+		here its different, in 6502 the name is same for different Addressind modes
+		but still it will be different when opcode is represented in HEX notation.
+		we know that there is a 16 x 16 matrix which represent total opcodes.
+
+		now theres one thing , first we will definitely make a emulator for 6502
+		before NES and our Goal is to make the 6502 emulator work perfectly seperate
+		as its own project which will be able to run programs written for 6502
+		which means it has its own parser and aseembler
+
+		APPRAOCH : now we can approach it in two ways:
+								 
+					(1) first is to keep it simple and let the opcodes be written in 
+					hex notation and let the emulator parse them directly like we did
+					in LAB ( meaning no need to worry about figuiring out addressing mode)
+
+					(2) keep the programs as it is in english and make a parser for them
+					which will then require addressing modes too 
+					BUT this one will be the right way to proceede as eventually the games 
+					of NES will be coded that way so yeah 
