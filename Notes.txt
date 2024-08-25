@@ -34,3 +34,70 @@ CPU :
 					which will then require addressing modes too 
 					BUT this one will be the right way to proceede as eventually the games 
 					of NES will be coded that way so yeah 
+
+
+		PARSER APPRAOCH : we make the functions for only
+											56 opcodes and then keep the arguments for 
+											that function for the max arguments that 
+											that specific opcodes can have 
+											and keep the default value like -1 
+											if its the other addressing mode.
+
+
+
+Q: Basic computer operation question but I'm not sure how to ask it. 
+When we say that a computer has an instruction set, how does the 
+computer know what that set is? Is it stored in a ROM chip? Is 
+it stored in the CPU somewhere? Where did the manufacturer put 
+it so that it can read a disk and start processing machine code?
+
+
+ANS : The instruction set is hardwired into the CPU... 
+	It's actually a result of the way the circuit is built, there isn't an actual
+	space where the instructions are kept.
+
+	When a computer starts, there's a small program on a ROM that knows how to 
+	initialize all the components and boot the OS. Because of the way a computer
+	is built, this program is the first to run.
+
+	Instruction set
+
+	An instruction set is the set of machine code instructions that the CPU is
+	built to handle. The CPU doesn't have to load it from anywhere, it's built-in
+	to the CPU itself. Examples of instruction sets are: Intel x86, MIPS.
+
+
+	Boot loader
+
+	The boot loader is a small program that tells the CPU how to get the computer 
+	started. Obviously it's written using the CPU instruction set, and usually 
+	resides in ROM or EEPROM or something. It tells the CPU how to interface 
+	with the disk to load a boot sector (which then loads more of 
+	the operating system). On a PC, the boot loader is part of the BIOS.
+
+
+
+APPRAOCH on handling INSTRUCTIONS :  
+			what we decided finally is that having seperate classes for addressing modes 
+			and opcodes is bad bc they are a part of CPU itself so they should belong inside
+			the CPU6502 class itself. and it also saved us with a lot of bad passing of references
+			of objects of the classes for example passing CPU6502 object to Instruction 
+			so it can access PC register and upgrade the same PC register 
+			
+			Inheritance was also a bad idea bc it wouldve been wrong in the first place
+			like what does it even mean that AddressingModes class is inheriting from CPU
+			
+			plus lets just assume we even went on with it, then we had to make the member 
+			variable (like registers etc) of CPU6502 class ' STATIC ' so that they 
+			could be only inititated once and regardless of how many derived class objects 
+			are made it will only update the same base class varibale.
+
+			so the optimal thing to do is to put the addressing modes and opcodes inside
+			the CPU6502 class along with nested INSTRUCTIONS class.
+
+INSTRUCTION CLASS : instruction class hold the name of the instruction along with the 
+					with the function pointers of opcode funcs and addr mode funcs 
+					so we can create a std::vector<instructions> (256) having all the
+					combinations of opcodes and addr modes.
+
+
