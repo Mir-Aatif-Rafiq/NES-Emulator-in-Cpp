@@ -53,17 +53,148 @@ class CPU6502 {
 		u_int8_t XXX(); // Placeholder for illegal opcode
 
 	class Instruction{
-		private: 
-		// return type (*funcptrname)(arguments);`
-		// e.g. funcptrname = add;
-		// we can also use auto funcptrname = add; directly
-		std::string opcode_name;
-		// std::function<u_int8_t(void)> opcode_name;
-		u_int8_t (CPU6502::*opcodeName)(void) = nullptr;
-		u_int8_t (CPU6502::*addrModeName)(void) = nullptr;
-		u_int8_t clock_cycles;
-
+		public: 
+			// return type (*funcptrname)(arguments);`
+			// e.g. funcptrname = add;
+			// we can also use auto funcptrname = add; directly
+			std::string opcode_name;
+			// std::function<u_int8_t(void)> opcode_name;
+			u_int8_t (CPU6502::*opcodeName)(void) = nullptr;
+			u_int8_t (CPU6502::*addrModeName)(void) = nullptr;
+			u_int8_t clock_cycles;
 	};
+
+	private:
+    std::vector<CPU6502::Instruction> opcode_lookup = {
+      {"BRK", &CPU6502::BRK, &CPU6502::IMM, 7}, {"ORA", &CPU6502::ORA, &CPU6502::IZX, 6},
+      {"???", &CPU6502::XXX, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 8},
+      {"???", &CPU6502::NOP, &CPU6502::IMP, 3}, {"ORA", &CPU6502::ORA, &CPU6502::ZP0, 3},
+      {"ASL", &CPU6502::ASL, &CPU6502::ZP0, 5}, {"???", &CPU6502::XXX, &CPU6502::IMP, 5},
+      {"PHP", &CPU6502::PHP, &CPU6502::IMP, 3}, {"ORA", &CPU6502::ORA, &CPU6502::IMM, 2},
+      {"ASL", &CPU6502::ASL, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 2},
+      {"???", &CPU6502::NOP, &CPU6502::IMP, 4}, {"ORA", &CPU6502::ORA, &CPU6502::ABS, 4},
+      {"ASL", &CPU6502::ASL, &CPU6502::ABS, 6}, {"???", &CPU6502::XXX, &CPU6502::IMP, 6},
+      {"BPL", &CPU6502::BPL, &CPU6502::REL, 2}, {"ORA", &CPU6502::ORA, &CPU6502::IZY, 5},
+      {"???", &CPU6502::XXX, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 8},
+      {"???", &CPU6502::NOP, &CPU6502::IMP, 4}, {"ORA", &CPU6502::ORA, &CPU6502::ZPX, 4},
+      {"ASL", &CPU6502::ASL, &CPU6502::ZPX, 6}, {"???", &CPU6502::XXX, &CPU6502::IMP, 6},
+      {"CLC", &CPU6502::CLC, &CPU6502::IMP, 2}, {"ORA", &CPU6502::ORA, &CPU6502::ABY, 4},
+      {"???", &CPU6502::NOP, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 7},
+      {"???", &CPU6502::NOP, &CPU6502::IMP, 4}, {"ORA", &CPU6502::ORA, &CPU6502::ABX, 4},
+      {"ASL", &CPU6502::ASL, &CPU6502::ABX, 7}, {"???", &CPU6502::XXX, &CPU6502::IMP, 7},
+      {"JSR", &CPU6502::JSR, &CPU6502::ABS, 6}, {"AND", &CPU6502::AND, &CPU6502::IZX, 6},
+      {"???", &CPU6502::XXX, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 8},
+      {"BIT", &CPU6502::BIT, &CPU6502::ZP0, 3}, {"AND", &CPU6502::AND, &CPU6502::ZP0, 3},
+      {"ROL", &CPU6502::ROL, &CPU6502::ZP0, 5}, {"???", &CPU6502::XXX, &CPU6502::IMP, 5},
+      {"PLP", &CPU6502::PLP, &CPU6502::IMP, 4}, {"AND", &CPU6502::AND, &CPU6502::IMM, 2},
+      {"ROL", &CPU6502::ROL, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 2},
+      {"BIT", &CPU6502::BIT, &CPU6502::ABS, 4}, {"AND", &CPU6502::AND, &CPU6502::ABS, 4},
+      {"ROL", &CPU6502::ROL, &CPU6502::ABS, 6}, {"???", &CPU6502::XXX, &CPU6502::IMP, 6},
+      {"BMI", &CPU6502::BMI, &CPU6502::REL, 2}, {"AND", &CPU6502::AND, &CPU6502::IZY, 5},
+      {"???", &CPU6502::XXX, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 8},
+      {"???", &CPU6502::NOP, &CPU6502::IMP, 4}, {"AND", &CPU6502::AND, &CPU6502::ZPX, 4},
+      {"ROL", &CPU6502::ROL, &CPU6502::ZPX, 6}, {"???", &CPU6502::XXX, &CPU6502::IMP, 6},
+      {"SEC", &CPU6502::SEC, &CPU6502::IMP, 2}, {"AND", &CPU6502::AND, &CPU6502::ABY, 4},
+      {"???", &CPU6502::NOP, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 7},
+      {"???", &CPU6502::NOP, &CPU6502::IMP, 4}, {"AND", &CPU6502::AND, &CPU6502::ABX, 4},
+      {"ROL", &CPU6502::ROL, &CPU6502::ABX, 7}, {"???", &CPU6502::XXX, &CPU6502::IMP, 7},
+      {"RTI", &CPU6502::RTI, &CPU6502::IMP, 6}, {"EOR", &CPU6502::EOR, &CPU6502::IZX, 6},
+      {"???", &CPU6502::XXX, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 8},
+      {"???", &CPU6502::NOP, &CPU6502::IMP, 3}, {"EOR", &CPU6502::EOR, &CPU6502::ZP0, 3},
+      {"LSR", &CPU6502::LSR, &CPU6502::ZP0, 5}, {"???", &CPU6502::XXX, &CPU6502::IMP, 5},
+      {"PHA", &CPU6502::PHA, &CPU6502::IMP, 3}, {"EOR", &CPU6502::EOR, &CPU6502::IMM, 2},
+      {"LSR", &CPU6502::LSR, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 2},
+      {"JMP", &CPU6502::JMP, &CPU6502::ABS, 3}, {"EOR", &CPU6502::EOR, &CPU6502::ABS, 4},
+      {"LSR", &CPU6502::LSR, &CPU6502::ABS, 6}, {"???", &CPU6502::XXX, &CPU6502::IMP, 6},
+      {"BVC", &CPU6502::BVC, &CPU6502::REL, 2}, {"EOR", &CPU6502::EOR, &CPU6502::IZY, 5},
+      {"???", &CPU6502::XXX, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 8},
+      {"???", &CPU6502::NOP, &CPU6502::IMP, 4}, {"EOR", &CPU6502::EOR, &CPU6502::ZPX, 4},
+      {"LSR", &CPU6502::LSR, &CPU6502::ZPX, 6}, {"???", &CPU6502::XXX, &CPU6502::IMP, 6},
+      {"CLI", &CPU6502::CLI, &CPU6502::IMP, 2}, {"EOR", &CPU6502::EOR, &CPU6502::ABY, 4},
+      {"???", &CPU6502::NOP, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 7},
+      {"???", &CPU6502::NOP, &CPU6502::IMP, 4}, {"EOR", &CPU6502::EOR, &CPU6502::ABX, 4},
+      {"LSR", &CPU6502::LSR, &CPU6502::ABX, 7}, {"???", &CPU6502::XXX, &CPU6502::IMP, 7},
+      {"RTS", &CPU6502::RTS, &CPU6502::IMP, 6}, {"ADC", &CPU6502::ADC, &CPU6502::IZX, 6},
+      {"???", &CPU6502::XXX, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 8},
+      {"???", &CPU6502::NOP, &CPU6502::IMP, 3}, {"ADC", &CPU6502::ADC, &CPU6502::ZP0, 3},
+      {"ROR", &CPU6502::ROR, &CPU6502::ZP0, 5}, {"???", &CPU6502::XXX, &CPU6502::IMP, 5},
+      {"PLA", &CPU6502::PLA, &CPU6502::IMP, 4}, {"ADC", &CPU6502::ADC, &CPU6502::IMM, 2},
+      {"ROR", &CPU6502::ROR, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 2},
+      {"JMP", &CPU6502::JMP, &CPU6502::IND, 5}, {"ADC", &CPU6502::ADC, &CPU6502::ABS, 4},
+      {"ROR", &CPU6502::ROR, &CPU6502::ABS, 6}, {"???", &CPU6502::XXX, &CPU6502::IMP, 6},
+      {"BVS", &CPU6502::BVS, &CPU6502::REL, 2}, {"ADC", &CPU6502::ADC, &CPU6502::IZY, 5},
+      {"???", &CPU6502::XXX, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 8},
+      {"???", &CPU6502::NOP, &CPU6502::IMP, 4}, {"ADC", &CPU6502::ADC, &CPU6502::ZPX, 4},
+      {"ROR", &CPU6502::ROR, &CPU6502::ZPX, 6}, {"???", &CPU6502::XXX, &CPU6502::IMP, 6},
+      {"SEI", &CPU6502::SEI, &CPU6502::IMP, 2}, {"ADC", &CPU6502::ADC, &CPU6502::ABY, 4},
+      {"???", &CPU6502::NOP, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 7},
+      {"???", &CPU6502::NOP, &CPU6502::IMP, 4}, {"ADC", &CPU6502::ADC, &CPU6502::ABX, 4},
+      {"ROR", &CPU6502::ROR, &CPU6502::ABX, 7}, {"???", &CPU6502::XXX, &CPU6502::IMP, 7},
+      {"???", &CPU6502::NOP, &CPU6502::IMP, 2}, {"STA", &CPU6502::STA, &CPU6502::IZX, 6},
+      {"???", &CPU6502::NOP, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 6},
+      {"STY", &CPU6502::STY, &CPU6502::ZP0, 3}, {"STA", &CPU6502::STA, &CPU6502::ZP0, 3},
+      {"STX", &CPU6502::STX, &CPU6502::ZP0, 3}, {"???", &CPU6502::XXX, &CPU6502::IMP, 3},
+      {"DEY", &CPU6502::DEY, &CPU6502::IMP, 2}, {"???", &CPU6502::NOP, &CPU6502::IMP, 2},
+      {"TXA", &CPU6502::TXA, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 2},
+      {"STY", &CPU6502::STY, &CPU6502::ABS, 4}, {"STA", &CPU6502::STA, &CPU6502::ABS, 4},
+      {"STX", &CPU6502::STX, &CPU6502::ABS, 4}, {"???", &CPU6502::XXX, &CPU6502::IMP, 4},
+      {"BCC", &CPU6502::BCC, &CPU6502::REL, 2}, {"STA", &CPU6502::STA, &CPU6502::IZY, 6},
+      {"???", &CPU6502::XXX, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 6},
+      {"STY", &CPU6502::STY, &CPU6502::ZPX, 4}, {"STA", &CPU6502::STA, &CPU6502::ZPX, 4},
+      {"STX", &CPU6502::STX, &CPU6502::ZPY, 4}, {"???", &CPU6502::XXX, &CPU6502::IMP, 4},
+      {"TYA", &CPU6502::TYA, &CPU6502::IMP, 2}, {"STA", &CPU6502::STA, &CPU6502::ABY, 5},
+      {"TXS", &CPU6502::TXS, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 5},
+      {"???", &CPU6502::NOP, &CPU6502::IMP, 5}, {"STA", &CPU6502::STA, &CPU6502::ABX, 5},
+      {"???", &CPU6502::XXX, &CPU6502::IMP, 5}, {"???", &CPU6502::XXX, &CPU6502::IMP, 5},
+      {"LDY", &CPU6502::LDY, &CPU6502::IMM, 2}, {"LDA", &CPU6502::LDA, &CPU6502::IZX, 6},
+      {"LDX", &CPU6502::LDX, &CPU6502::IMM, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 6},
+      {"LDY", &CPU6502::LDY, &CPU6502::ZP0, 3}, {"LDA", &CPU6502::LDA, &CPU6502::ZP0, 3},
+      {"LDX", &CPU6502::LDX, &CPU6502::ZP0, 3}, {"???", &CPU6502::XXX, &CPU6502::IMP, 3},
+      {"TAY", &CPU6502::TAY, &CPU6502::IMP, 2}, {"LDA", &CPU6502::LDA, &CPU6502::IMM, 2},
+      {"TAX", &CPU6502::TAX, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 2},
+      {"LDY", &CPU6502::LDY, &CPU6502::ABS, 4}, {"LDA", &CPU6502::LDA, &CPU6502::ABS, 4},
+      {"LDX", &CPU6502::LDX, &CPU6502::ABS, 4}, {"???", &CPU6502::XXX, &CPU6502::IMP, 4},
+      {"BCS", &CPU6502::BCS, &CPU6502::REL, 2}, {"LDA", &CPU6502::LDA, &CPU6502::IZY, 5},
+      {"???", &CPU6502::XXX, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 5},
+      {"LDY", &CPU6502::LDY, &CPU6502::ZPX, 4}, {"LDA", &CPU6502::LDA, &CPU6502::ZPX, 4},
+      {"LDX", &CPU6502::LDX, &CPU6502::ZPY, 4}, {"???", &CPU6502::XXX, &CPU6502::IMP, 4},
+      {"CLV", &CPU6502::CLV, &CPU6502::IMP, 2}, {"LDA", &CPU6502::LDA, &CPU6502::ABY, 4},
+      {"TSX", &CPU6502::TSX, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 4},
+      {"LDY", &CPU6502::LDY, &CPU6502::ABX, 4}, {"LDA", &CPU6502::LDA, &CPU6502::ABX, 4},
+      {"LDX", &CPU6502::LDX, &CPU6502::ABY, 4}, {"???", &CPU6502::XXX, &CPU6502::IMP, 4},
+      {"CPY", &CPU6502::CPY, &CPU6502::IMM, 2}, {"CMP", &CPU6502::CMP, &CPU6502::IZX, 6},
+      {"???", &CPU6502::NOP, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 8},
+      {"CPY", &CPU6502::CPY, &CPU6502::ZP0, 3}, {"CMP", &CPU6502::CMP, &CPU6502::ZP0, 3},
+      {"DEC", &CPU6502::DEC, &CPU6502::ZP0, 5}, {"???", &CPU6502::XXX, &CPU6502::IMP, 5},
+      {"INY", &CPU6502::INY, &CPU6502::IMP, 2}, {"CMP", &CPU6502::CMP, &CPU6502::IMM, 2},
+      {"DEX", &CPU6502::DEX, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 2},
+      {"CPY", &CPU6502::CPY, &CPU6502::ABS, 4}, {"CMP", &CPU6502::CMP, &CPU6502::ABS, 4},
+      {"DEC", &CPU6502::DEC, &CPU6502::ABS, 6}, {"???", &CPU6502::XXX, &CPU6502::IMP, 6},
+      {"BNE", &CPU6502::BNE, &CPU6502::REL, 2}, {"CMP", &CPU6502::CMP, &CPU6502::IZY, 5},
+      {"???", &CPU6502::XXX, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 8},
+      {"???", &CPU6502::NOP, &CPU6502::IMP, 4}, {"CMP", &CPU6502::CMP, &CPU6502::ZPX, 4},
+      {"DEC", &CPU6502::DEC, &CPU6502::ZPX, 6}, {"???", &CPU6502::XXX, &CPU6502::IMP, 6},
+      {"CLD", &CPU6502::CLD, &CPU6502::IMP, 2}, {"CMP", &CPU6502::CMP, &CPU6502::ABY, 4},
+      {"NOP", &CPU6502::NOP, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 7},
+      {"???", &CPU6502::NOP, &CPU6502::IMP, 4}, {"CMP", &CPU6502::CMP, &CPU6502::ABX, 4},
+      {"DEC", &CPU6502::DEC, &CPU6502::ABX, 7}, {"???", &CPU6502::XXX, &CPU6502::IMP, 7},
+      {"CPX", &CPU6502::CPX, &CPU6502::IMM, 2}, {"SBC", &CPU6502::SBC, &CPU6502::IZX, 6},
+      {"???", &CPU6502::NOP, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 8},
+      {"CPX", &CPU6502::CPX, &CPU6502::ZP0, 3}, {"SBC", &CPU6502::SBC, &CPU6502::ZP0, 3},
+      {"INC", &CPU6502::INC, &CPU6502::ZP0, 5}, {"???", &CPU6502::XXX, &CPU6502::IMP, 5},
+      {"INX", &CPU6502::INX, &CPU6502::IMP, 2}, {"SBC", &CPU6502::SBC, &CPU6502::IMM, 2},
+      {"NOP", &CPU6502::NOP, &CPU6502::IMP, 2}, {"???", &CPU6502::SBC, &CPU6502::IMP, 2},
+      {"CPX", &CPU6502::CPX, &CPU6502::ABS, 4}, {"SBC", &CPU6502::SBC, &CPU6502::ABS, 4},
+      {"INC", &CPU6502::INC, &CPU6502::ABS, 6}, {"???", &CPU6502::XXX, &CPU6502::IMP, 6},
+      {"BEQ", &CPU6502::BEQ, &CPU6502::REL, 2}, {"SBC", &CPU6502::SBC, &CPU6502::IZY, 5},
+      {"???", &CPU6502::XXX, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 8},
+      {"???", &CPU6502::NOP, &CPU6502::IMP, 4}, {"SBC", &CPU6502::SBC, &CPU6502::ZPX, 4},
+      {"INC", &CPU6502::INC, &CPU6502::ZPX, 6}, {"???", &CPU6502::XXX, &CPU6502::IMP, 6},
+      {"SED", &CPU6502::SED, &CPU6502::IMP, 2}, {"SBC", &CPU6502::SBC, &CPU6502::ABY, 4},
+      {"NOP", &CPU6502::NOP, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 7},
+      {"???", &CPU6502::NOP, &CPU6502::IMP, 4}, {"SBC", &CPU6502::SBC, &CPU6502::ABX, 4},
+      {"INC", &CPU6502::INC, &CPU6502::ABX, 7}, {"???", &CPU6502::XXX, &CPU6502::IMP, 7},
+  	}; // 256 size , "???" for empty opcode capture
 };
 
 class RAM {
