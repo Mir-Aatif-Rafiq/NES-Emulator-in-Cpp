@@ -1,7 +1,6 @@
 
 #include <iostream>
 #include <vector>
-#include <functional>
 
 class CPU6502 {
 	public: 
@@ -26,7 +25,8 @@ class CPU6502 {
 
 		Clock clk;
 
-	private: // ADDRESSING MODES
+	private: // ADDRESSING MODES returning the value at addresses after opcode
+  
 		u_int8_t IMP();	u_int8_t IMM();	//implicit like CLC(no operand)// immediate
 		u_int8_t ZP0();	u_int8_t ZPX();	//zero page // zero page + X register
 		u_int8_t ZPY();	u_int8_t REL(); //zero page +Y register //Relative for branch
@@ -195,7 +195,22 @@ class CPU6502 {
       {"???", &CPU6502::NOP, &CPU6502::IMP, 4}, {"SBC", &CPU6502::SBC, &CPU6502::ABX, 4},
       {"INC", &CPU6502::INC, &CPU6502::ABX, 7}, {"???", &CPU6502::XXX, &CPU6502::IMP, 7},
   	}; // 256 size , "???" for empty opcode capture
+		// index of this vector is the equivalent of the opcode in HEX
 };
+
+/*
+* the ram of 6502 has multiple segments :
+  it has a zero page $0000- $00FF can address 256 bytes
+
+  the system stack starts from the second page $0100-01FF
+  and cannot be reallocated.
+
+  The only other reserved locations in the memory map are 
+  the very last 6 bytes of memory $FFFA to $FFFF which must
+  be programmed with the addresses of the non-maskable 
+  interrupt handler ($FFFA/B), the power on reset location ($FFFC/D)
+  and the BRK/interrupt request handler ($FFFE/F) respectively.
+*/
 
 class RAM {
 	public:
