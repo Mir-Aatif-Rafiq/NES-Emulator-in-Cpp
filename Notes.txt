@@ -101,3 +101,31 @@ INSTRUCTION CLASS : instruction class hold the name of the instruction along wit
 					combinations of opcodes and addr modes.
 
 
+AddressingModes : The clock cycles mentioned for each addressing mode on the 6502 CPU
+ represent the total time required to execute the entire instruction, including:
+
+    Opcode Fetch: The CPU fetches the instruction's opcode from memory.
+    Operand Fetch: If needed, the CPU fetches the operand(s)
+		 (e.g., immediate value, memory address).
+    Address Calculation: If the instruction uses an addressing mode that involves 
+		calculating an effective address (like adding a register to a base address), 
+		this is included.Memory Access: The CPU reads from or writes to memory if 
+		required by the instruction (e.g., loading data into a 
+		register, storing data from a register).
+
+Behind the Scenes Breakdown:
+
+    Cycle 1: Fetch the opcode (always happens).
+    Cycle 2+: Depending on the addressing mode, fetch operand(s) and 
+							calculate the effective address.
+    Final Cycles: Perform the operation, potentially reading from 
+								or writing to memory.
+
+Example (LDA $1234,X with Page Cross):
+
+    Cycle 1: Fetch opcode (LDA).
+    Cycle 2-3: Fetch address $1234 and add X to it.
+    Cycle 4: Access the calculated address, but if the address crosses a 
+		page boundary, an additional cycle is needed to correct the address.
+
+
