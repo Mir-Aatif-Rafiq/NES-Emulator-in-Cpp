@@ -35,10 +35,7 @@ u_int8_t Bus::bus_read(u_int16_t address){
 
 
 
-
-
-
-u_int8_t  CPU6502::IMP() {  // Implied is just one byte instructions
+u_int8_t CPU6502::IMP() {  // Implied is just one byte instructions
 	PC++;
 
 }
@@ -54,10 +51,13 @@ u_int8_t CPU6502::IMM() {   // in assemble LDA  #$42  , uses # before value, loa
 * in 6502 the pages are indexed using the upper byte and the offset is the lower byte.
 */
 u_int8_t CPU6502::ZP0() {  // its just the first page. operand is offeset of ZP
-
 	PC+=2;
-
-
+}
+u_int8_t CPU6502::ZPX() {
+	PC+=2;
+}  // its just the first page
+u_int8_t CPU6502::ZPY() {
+	PC+=2;
 }
 // ZPX and ZPY are zero page indexed with contents of X and Y register
 
