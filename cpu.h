@@ -25,8 +25,10 @@ class CPU6502 {
 
 		Clock clk;
 
+    Bus* bus;
+
 	private: // ADDRESSING MODES returning the value at addresses after opcode
-  
+
 		u_int8_t IMP();	u_int8_t IMM();	//implicit like CLC(no operand)// immediate
 		u_int8_t ZP0();	u_int8_t ZPX();	//zero page // zero page + X register
 		u_int8_t ZPY();	u_int8_t REL(); //zero page +Y register //Relative for branch
@@ -52,7 +54,7 @@ class CPU6502 {
 
 		u_int8_t XXX(); // Placeholder for illegal opcode
 
-	class Instruction{
+	class Instruction{  // thinking about making it virtual
 		public: 
 			// return type (*funcptrname)(arguments);`
 			// e.g. funcptrname = add;
@@ -196,6 +198,16 @@ class CPU6502 {
       {"INC", &CPU6502::INC, &CPU6502::ABX, 7}, {"???", &CPU6502::XXX, &CPU6502::IMP, 7},
   	}; // 256 size , "???" for empty opcode capture
 		// index of this vector is the equivalent of the opcode in HEX
+
+    u_int8_t data_fetched = 0x00;
+    u_int8_t lo_data_fetched = 0x00;
+    u_int8_t hi_data_fecthed = 0x00;
+    u_int16_t abs_addr_fetched = 0x0000;
+    u_int16_t rel_addr_fetched = 0x0000;
+
+  public:
+    void executor();
+
 };
 
 /*
