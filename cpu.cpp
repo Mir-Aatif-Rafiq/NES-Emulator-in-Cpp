@@ -31,6 +31,30 @@ u_int8_t Bus::bus_read(u_int16_t address){
 	return b_ram->ram.at(address);
 }
 
+/*
+* Setter and Getter for flags
+*/
+void CPU6502::setFlag(FLAGS6502 flag, bool condition) {
+  if(condition){
+		STATUS |= flag;
+	}
+  
+	else{
+		STATUS &= ~flag;
+	}
+}
+
+bool CPU6502::getFlag(FLAGS6502 flag) {
+  if(STATUS & flag){
+		return 1;
+	}
+	else 
+	return 0;
+}
+
+
+
+
 // should i keep seperate functions for ram r/w which bus will use???
 
 
@@ -257,24 +281,49 @@ bool  CPU6502::REL() { // relative wrt PC but signed 2s compliment
 	return 0;
 }
 
-/*
-* currently clock has no functionality apart from keeping 
-* tabs on how many clk cycles has passed and maybe it might
-* be used later bc many opcodes having different overflows 
-* can alter the number of clock cycles they take.
-*/
-class Clock {
-	public: 
-		u_int64_t clock_cycles = 0;
 
-};
+
+
+// Instruction: Bitwise Logic AND
+// Function:    A = A & M
+// Flags Out:   N, Z
+u_int8_t CPU6502::AND()
+{
+	A &= data_fetched;
+
+	setFlag(Z ,A == 0);
+	setFlag(N, A & 0x80);
+}
+
+
+// Instruction: Arithmetic Shift Left
+// Function:    A = C <- (A << 1) <- 0
+// Flags Out:   N, Z, C
+u_int8_t CPU6502::ASL()
+{	
+	if(opcode_lookup.at(opcode).addrModeName == CPU6502::IMP) {
+		setFlag(C, A & 0x80);
+		A = A << 1;
+		setFlag(Z ,A == 0);
+		setFlag(N, A & 0x80);
+		return 0;
+	}
+	else {
+		setFlag(C, data_fetched & 0x80);
+		data_fetched = data_fetched << 1;
+		setFlag(Z ,data_fetched == 0);
+		setFlag(N, data_fetched & 0x80);
+
+		bus->bus_write(abs_addr_fetched,data_fetched);
+		return 0;
+
+	}
+	
+}
 
 // reset , interrrupt request, nmi these signals are async and need to be checked.
 
 
-
-// theory about the pages in 6502 and the need of an additional clk cycle if
-// the page changes.
 
 
 
