@@ -434,6 +434,42 @@ u_int8_t CPU6502::BVS()
 }
 
 
+// Instruction: Clear Carry Flag
+// Function:    C = 0
+u_int8_t CPU6502::CLC()
+{
+	setFlag(C, false);
+	return 0;
+}
+
+
+// Instruction: Clear Decimal Flag
+// Function:    D = 0
+u_int8_t CPU6502::CLD()
+{
+	setFlag(D, false);
+	return 0;
+}
+
+
+// Instruction: Disable Interrupts / Clear Interrupt Flag
+// Function:    I = 0
+u_int8_t CPU6502::CLI()
+{
+	setFlag(I, false);
+	return 0;
+}
+
+
+// Instruction: Clear Overflow Flag
+// Function:    V = 0
+u_int8_t CPU6502::CLV()
+{
+	setFlag(V, false);
+	return 0;
+}
+
+
 
 
 
