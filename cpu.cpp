@@ -533,6 +533,50 @@ u_int8_t CPU6502::DEY() {
 	return 0;
 }
 
+// Instruction: Bitwise Logic XOR
+// Function:    A = A xor M
+// Flags Out:   N, Z
+u_int8_t CPU6502::EOR(){
+	
+	A = A ^ data_fetched;	
+	setFlag(Z, A == 0x00);
+	setFlag(N, A & 0x80);
+	return 1;
+}
+
+
+// Instruction: Increment Value at Memory Location
+// Function:    M = M + 1
+// Flags Out:   N, Z
+u_int8_t CPU6502::INC(){
+	data_fetched = data_fetched + 1;
+	bus->bus_write(abs_addr_fetched, data_fetched);
+	setFlag(Z, (data_fetched) == 0x00);
+	setFlag(N, data_fetched & 0x80);
+	return 0;
+}
+
+
+// Instruction: Increment X Register
+// Function:    X = X + 1
+// Flags Out:   N, Z
+u_int8_t CPU6502::INX(){
+	X++;
+	setFlag(Z, X == 0x00);
+	setFlag(N, X & 0x80);
+	return 0;
+}
+
+
+// Instruction: Increment Y Register
+// Function:    Y = Y + 1
+// Flags Out:   N, Z
+u_int8_t CPU6502::INY(){
+	Y++;
+	setFlag(Z, Y == 0x00);
+	setFlag(N, Y & 0x80);
+	return 0;
+}
 
 
 
