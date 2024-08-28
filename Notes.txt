@@ -153,3 +153,16 @@ of the index to the base address causes a page boundary crossing, the CPU incurs
 an extra cycle to correct the effective address. The extra cycle is due to the overhead of 
 handling the carry-over in the address calculation.
 
+Question :
+
+How would we know even after addressing mode function runs, now opcode fucntion has to run
+how would it know still that what to do with the operand, should it have multiple
+switch cases inside (e.g. AND (){} should have switch cases for IMM IND etc)?
+
+ANSWER :
+
+No, we dont have to take care of that. Regardless of whatever is the addressing mode
+the opcode only cares about what it wants like in AND it only cares about data fetched
+and it will be provided by all the ADDRESSING MODES to it , the most updted one
+bc the executor will always run the addr mode func first and then the opcode func.
+
