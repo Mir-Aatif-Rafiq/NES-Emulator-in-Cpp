@@ -403,6 +403,45 @@ u_int8_t CPU6502::BPL()
 	}
 	return 0;
 }
+
+// Instruction: Branch if Overflow Clear
+// Function:    if(V == 0) pc = address
+u_int8_t CPU6502::BVC()
+{
+	if (getFlag(V) == 0){
+	cycles++;
+		if(PC-2 + lo_data_fetched & 0xFF00 != PC-2){
+			cycles++;
+		}
+		PC = rel_addr_fetched;
+	}
+	return 0;
+}
+
+
+// Instruction: Branch if Overflow Set
+// Function:    if(V == 1) pc = address
+u_int8_t CPU6502::BVS()
+{
+	if (getFlag(V) == 1){
+	cycles++;
+		if(PC-2 + lo_data_fetched & 0xFF00 != PC-2){
+			cycles++;
+		}
+		PC = rel_addr_fetched;
+	}
+	return 0;
+}
+
+
+
+
+
+
+
+
+
+
 // reset , interrrupt request, nmi these signals are async and need to be checked.
 
 
