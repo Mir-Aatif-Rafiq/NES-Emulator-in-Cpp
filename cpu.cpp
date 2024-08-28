@@ -469,6 +469,69 @@ u_int8_t CPU6502::CLV()
 	return 0;
 }
 
+// Instruction: Compare Accumulator
+// Function:    C <-  (A >= M )     Z <- (A - M) == 0
+// Flags Out:   N, C, Z
+u_int8_t CPU6502::CMP() {
+	u_int8_t temp = A - data_fetched;
+	setFlag(N, temp & 0x80);
+	setFlag(C, A >= data_fetched);
+	setFlag(Z, temp == 0);
+	return 0;
+}
+
+// Instruction: Compare X Register
+// Function:    C <- X >= M      Z <- (X - M) == 0
+// Flags Out:   N, C, Z
+u_int8_t CPU6502::CPX() {
+	u_int8_t temp = X - data_fetched;
+	setFlag(N, temp & 0x80);
+	setFlag(C, X >= data_fetched);
+	setFlag(Z, temp == 0);
+	return 0;
+}
+
+// Instruction: Compare Y Register
+// Function:    C <- Y >= M      Z <- (Y - M) == 0
+// Flags Out:   N, C, Z
+u_int8_t CPU6502::CPY() {
+	u_int8_t temp = Y - data_fetched;
+	setFlag(N, temp & 0x80);
+	setFlag(C, Y >= data_fetched);
+	setFlag(Z, temp == 0);
+}
+
+// Instruction: Decrement Value at Memory Location
+// Function:    M = M - 1
+// Flags Out:   N, Z
+u_int8_t CPU6502::DEC() {
+	data_fetched = data_fetched - 1;
+	bus->bus_write(abs_addr_fetched, data_fetched);
+	setFlag(Z, (data_fetched) == 0x00);
+	setFlag(N, data_fetched & 0x80);
+	return 0;
+}
+
+
+// Instruction: Decrement X Register
+// Function:    X = X - 1
+// Flags Out:   N, Z
+u_int8_t CPU6502::DEX() {
+	X--;
+	setFlag(Z, Y == 0x00);
+	setFlag(N, Y & 0x80);
+	return 0;
+}
+
+// Instruction: Decrement Y Register
+// Function:    Y = Y - 1
+// Flags Out:   N, Z
+u_int8_t CPU6502::DEY() {
+	Y--;
+	setFlag(Z, Y == 0x00);
+	setFlag(N, Y & 0x80);
+	return 0;
+}
 
 
 
