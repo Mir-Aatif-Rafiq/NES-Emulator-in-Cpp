@@ -363,6 +363,46 @@ u_int8_t CPU6502::BEQ() {
 	return 0;
 }
 
+// Instruction: Branch if Negative
+// Function:    if(N == 1) pc = address
+u_int8_t CPU6502::BMI() {
+	if (getFlag(N) == 1) {
+	cycles++;
+		if(PC-2 + lo_data_fetched & 0xFF00 != PC-2){
+			cycles++;
+		}
+		PC = rel_addr_fetched;
+	}
+	return 0;
+}
+
+
+// Instruction: Branch if Not Equal
+// Function:    if(Z == 0) pc = address
+u_int8_t CPU6502::BNE() {
+	if (getFlag(Z) == 0) {
+	cycles++;
+		if(PC-2 + lo_data_fetched & 0xFF00 != PC-2){
+			cycles++;
+		}
+		PC = rel_addr_fetched;
+	}
+	return 0;
+}
+
+// Instruction: Branch if Positive
+// Function:    if(N == 0) pc = address
+u_int8_t CPU6502::BPL()
+{
+	if (getFlag(N) == 0){
+	cycles++;
+		if(PC-2 + lo_data_fetched & 0xFF00 != PC-2){
+			cycles++;
+		}
+		PC = rel_addr_fetched;
+	}
+	return 0;
+}
 // reset , interrrupt request, nmi these signals are async and need to be checked.
 
 
