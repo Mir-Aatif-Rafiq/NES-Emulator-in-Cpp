@@ -271,11 +271,11 @@ bool  CPU6502::REL() { // relative wrt PC but signed 2s compliment
 		u_int16_t temp = (u_int16_t)lo_data_fetched;
 		temp |= 0xFF00; // extending to 16
 		temp = ~(temp - 1); // 2s comp calc
-		rel_addr_fetched = (PC + 1 - temp) & 0xFF;
+		rel_addr_fetched = (PC + 2 - temp) & 0xFF;
 	}
 
 	else {
-		rel_addr_fetched = (PC + 1 + lo_data_fetched) & 0x00FF;
+		rel_addr_fetched = (PC + 2 + lo_data_fetched) & 0x00FF;
 	}
 	PC +=2;
 	return 0;
@@ -287,8 +287,7 @@ bool  CPU6502::REL() { // relative wrt PC but signed 2s compliment
 // Instruction: Bitwise Logic AND
 // Function:    A = A & M
 // Flags Out:   N, Z
-u_int8_t CPU6502::AND()
-{
+u_int8_t CPU6502::AND() {
 	A &= data_fetched;
 
 	setFlag(Z ,A == 0);
@@ -299,8 +298,7 @@ u_int8_t CPU6502::AND()
 // Instruction: Arithmetic Shift Left
 // Function:    A = C <- (A << 1) <- 0
 // Flags Out:   N, Z, C
-u_int8_t CPU6502::ASL()
-{	
+u_int8_t CPU6502::ASL() {	
 	if(opcode_lookup.at(opcode).addrModeName == CPU6502::IMP) {
 		setFlag(C, A & 0x80);
 		A = A << 1;
@@ -318,7 +316,51 @@ u_int8_t CPU6502::ASL()
 		return 0;
 
 	}
-	
+
+}
+
+// Instruction: Branch if Carry Clear
+// Function:    if(C == 0) pc = address 
+u_int8_t CPU6502::BCC() {
+	if (getFlag(C) == 0) {
+
+		cycles++; // adding cycle bc in executor default clk val will always get added
+		if(PC-2 + lo_data_fetched & 0xFF00 != PC-2){
+			cycles++;
+		}
+		PC = rel_addr_fetched;
+	}
+	return 0;
+}
+
+
+// Instruction: Branch if Carry Set
+// Function:    if(C == 1) pc = address
+u_int8_t CPU6502::BCS() {
+	if (getFlag(C) == 1) {
+
+		cycles++;
+		if(PC-2 + lo_data_fetched & 0xFF00 != PC-2){
+			cycles++;
+		}
+		PC = rel_addr_fetched;
+	}
+	return 0;
+}
+
+
+// Instruction: Branch if Equal
+// Function:    if(Z == 1) pc = address (prev result ==0)
+u_int8_t CPU6502::BEQ() {
+	if (getFlag(Z) == 1) {
+
+		cycles++;
+		if(PC-2 + lo_data_fetched & 0xFF00 != PC-2){
+			cycles++;
+		}
+		PC = rel_addr_fetched;
+	}
+	return 0;
 }
 
 // reset , interrrupt request, nmi these signals are async and need to be checked.
