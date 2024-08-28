@@ -128,4 +128,28 @@ Example (LDA $1234,X with Page Cross):
     Cycle 4: Access the calculated address, but if the address crosses a 
 		page boundary, an additional cycle is needed to correct the address.
 
+BUGS in addressing modes : 
+	there are some bugs or work around in addressing modes in 6502
+	like if in zero page addressing mode where X,Y register is added to offest
+	if it crosses the 0xFF boundary . it doesnt go into the next page 
+	it wrap arounds in the zeroth page to save one clock cycle.
+
+	another one is indirect mode where the lo byte of the pointed address
+	is on some page with offest at 0xFF which means the hi byte is on the next 
+	page , but it also doesnt happen it also wraps around in the same page
+
+Question:
+
+Why does crossing a page boundary in certain addressing modes (e.g., Absolute,X)
+result in an extra clock cycle, while crossing a page boundary during normal 
+program execution does not?
+
+Answer:
+
+When the program counter (PC) crosses a page boundary(sequential fetch), the CPU simply 
+fetches the next sequential byte without extra cycles. However, in addressing modes 
+involving index registers (like Absolute,X),(Effective Address Calculation) if the addition 
+of the index to the base address causes a page boundary crossing, the CPU incurs 
+an extra cycle to correct the effective address. The extra cycle is due to the overhead of 
+handling the carry-over in the address calculation.
 
