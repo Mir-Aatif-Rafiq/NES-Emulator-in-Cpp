@@ -12,6 +12,7 @@ class CPU6502 {
 							// overflow is not detected by the CPU
 		u_int16_t PC = 0x0000;
   	u_int8_t STATUS = 0x00; // Status register  
+    
 		/*
 		* 0 bit : carry flag
 		* 1 bit : zero bit
@@ -22,10 +23,24 @@ class CPU6502 {
 		* 6 bit : overflow
 		* 7 bit : negative 
 		*/
+    enum FLAGS6502
+	  {
+		  C = (1 << 0),	// Carry Bit
+		  Z = (1 << 1),	// Zero
+		  I = (1 << 2),	// Disable Interrupts
+		  D = (1 << 3),	// Decimal Mode (unused in this implementation)
+		  B = (1 << 4),	// Break
+		  U = (1 << 5),	// Unused
+		  V = (1 << 6),	// Overflow
+		  N = (1 << 7),	// Negative
+	  };
 
 		Clock clk;
-
     Bus* bus;
+
+  public:
+    void setFlag(FLAGS6502 flag, bool condition);
+    bool getFlag(FLAGS6502 flag);
 
 	private: // ADDRESSING MODES returning if additional clk cycle occurs
   // 0 -> no addtional clk cycle
@@ -206,6 +221,8 @@ class CPU6502 {
     u_int8_t hi_data_fecthed = 0x00;
     u_int16_t abs_addr_fetched = 0x0000;
     u_int16_t rel_addr_fetched = 0x0000;
+    u_int8_t opcode = 0x00;
+
 
   public:
     void executor();
@@ -250,6 +267,18 @@ class Bus {
 		u_int8_t bus_read(u_int16_t address);
 		// void read_enable();   // not sure we are even gonna emulate these two
 		// void write_enable();
+};
+
+/*
+* currently clock has no functionality apart from keeping 
+* tabs on how many clk cycles has passed and maybe it might
+* be used later bc many opcodes having different overflows 
+* can alter the number of clock cycles they take.
+*/
+class Clock {
+	public: 
+		u_int64_t clock_cycles = 0;
+
 };
 
 
