@@ -27,14 +27,16 @@ class CPU6502 {
 
     Bus* bus;
 
-	private: // ADDRESSING MODES returning the value at addresses after opcode
+	private: // ADDRESSING MODES returning if additional clk cycle occurs
+  // 0 -> no addtional clk cycle
+  // 1 -> 1 addition clk cycle
 
-		u_int8_t IMP();	u_int8_t IMM();	//implicit like CLC(no operand)// immediate
-		u_int8_t ZP0();	u_int8_t ZPX();	//zero page // zero page + X register
-		u_int8_t ZPY();	u_int8_t REL(); //zero page +Y register //Relative for branch
-		u_int8_t ABS();	u_int8_t ABX();	// absolute for 16 bit addr // addr + X reg
-		u_int8_t ABY();	u_int8_t IND();	// addr+Y reg // Indirect (memory indirect)
-		u_int8_t IZX();	u_int8_t IZY(); // indirect indexed + X,Y reg
+		bool IMP();	bool IMM();	//implicit like CLC(no operand)// immediate
+		bool ZP0();	bool ZPX();	//zero page // zero page + X register
+		bool ZPY();	bool REL(); //zero page +Y register //Relative for branch
+		bool ABS();	bool ABX();	// absolute for 16 bit addr // addr + X reg
+		bool ABY();	bool IND();	// addr+Y reg // Indirect (memory indirect)
+		bool IZX();	bool IZY(); // indirect indexed + X,Y reg
 	
 	private: // OPCODES 
 		u_int8_t ADC();	u_int8_t AND();	u_int8_t ASL();	u_int8_t BCC();
@@ -62,7 +64,7 @@ class CPU6502 {
 			std::string opcode_name;
 			// std::function<u_int8_t(void)> opcode_name;
 			u_int8_t (CPU6502::*opcodeName)(void) = nullptr;
-			u_int8_t (CPU6502::*addrModeName)(void) = nullptr;
+			bool (CPU6502::*addrModeName)(void) = nullptr;
 			u_int8_t clock_cycles;
 	};
 
