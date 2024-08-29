@@ -593,17 +593,16 @@ u_int8_t CPU6502::JMP() {
 // Instruction: Jump To Sub-Routine pushing return addr on stack
 // Function:    Push current pc to stack, pc = address
 // first high bit is pushed then low
-// fix it later''''''''''''''''''''
-// u_int8_t CPU6502::JSR() {
-	
-// 	bus->bus_write((u_int16_t)SP | 0x100, (PC >> 8) & 0x00FF);
-// 	SP--;
-// 	bus->bus_write((u_int16_t)SP | 0x100, PC & 0x00FF);
-// 	SP--;
+u_int8_t CPU6502::JSR() {
+	PC--;
+	bus->bus_write((u_int16_t)SP | 0x100, (PC >> 8) & 0x00FF);
+	SP--;
+	bus->bus_write((u_int16_t)SP | 0x100, PC & 0x00FF);
+	SP--;
 
-// 	PC = abs_addr_fetched;
-// 	return 0;
-// }
+	PC = abs_addr_fetched;
+	return 0;
+}
 
 // Instruction: Load The Accumulator
 // Function:    A = M
@@ -781,17 +780,17 @@ u_int8_t CPU6502::RTI() {
 	return 0;
 }
 
-// FIX when youll fix JSR()'''''''''''
-// // Instruction: Return From SubRoutine
-// u_int8_t CPU6502::RTS() {
-// 	SP++;
-// 	PC = (u_int16_t)bus->bus_read(0x0100 + SP);
-// 	SP++;
-// 	PC |= (u_int16_t)bus->bus_read(0x0100 + SP) << 8;
+// Instruction: Return From SubRoutine
+u_int8_t CPU6502::RTS() {
+	SP++;
+	PC = (u_int16_t)bus->bus_read(0x0100 + SP);
+	SP++;
+	PC |= (u_int16_t)bus->bus_read(0x0100 + SP) << 8;
 	
+	PC++;
 	
-// 	return 0;
-// }
+	return 0;
+}
 
 
 
