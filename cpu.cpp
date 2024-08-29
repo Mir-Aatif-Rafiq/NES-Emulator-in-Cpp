@@ -815,6 +815,29 @@ u_int8_t CPU6502::SEI() {
 	return 0;
 }
 
+// Instruction: Store Accumulator at Address
+// Function:    M = A
+u_int8_t CPU6502::STA() {
+	bus->bus_write(abs_addr_fetched, A);
+	return 0;
+}
+
+
+// Instruction: Store X Register at Address
+// Function:    M = X
+u_int8_t CPU6502::STX() {
+	bus->bus_write(abs_addr_fetched, X);
+	return 0;
+}
+
+
+// Instruction: Store Y Register at Address
+// Function:    M = Y
+u_int8_t CPU6502::STY() {
+	bus->bus_write(abs_addr_fetched, Y);
+	return 0;
+}
+
 
 
 
