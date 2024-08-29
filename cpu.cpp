@@ -838,6 +838,68 @@ u_int8_t CPU6502::STY() {
 	return 0;
 }
 
+// Instruction: Transfer Accumulator to X Register
+// Function:    X = A
+// Flags Out:   N, Z
+u_int8_t CPU6502::TAX() {
+	X = A;
+	setFlag(Z, X == 0x00);
+	setFlag(N, X & 0x80);
+	return 0;
+}
+
+
+// Instruction: Transfer Accumulator to Y Register
+// Function:    Y = A
+// Flags Out:   N, Z
+u_int8_t CPU6502::TAY() {
+	Y = A;
+	setFlag(Z, Y == 0x00);
+	setFlag(N, Y & 0x80);
+	return 0;
+}
+
+
+// Instruction: Transfer Stack Pointer to X Register
+// Function:    X = stack pointer
+// Flags Out:   N, Z
+u_int8_t CPU6502::TSX() {
+	X = SP;
+	setFlag(Z, X == 0x00);
+	setFlag(N, X & 0x80);
+	return 0;
+}
+
+
+// Instruction: Transfer X Register to Accumulator
+// Function:    A = X
+// Flags Out:   N, Z
+u_int8_t CPU6502::TXA() {
+	A = X;
+	setFlag(Z, A == 0x00);
+	setFlag(N, A & 0x80);
+	return 0;
+}
+
+
+// Instruction: Transfer X Register to Stack Pointer
+// Function:    stack pointer = X
+u_int8_t CPU6502::TXS() {
+	SP = X;
+	return 0;
+}
+
+
+// Instruction: Transfer Y Register to Accumulator
+// Function:    A = Y
+// Flags Out:   N, Z
+u_int8_t CPU6502::TYA() {
+	A = A;
+	setFlag(Z, A == 0x00);
+	setFlag(N, A & 0x80);
+	return 0;
+}
+
 
 
 
