@@ -208,7 +208,12 @@ bool CPU6502::IND() { // indirect mode is pointer only for jumps
 // i think here we also have to tackle the conditn of lo_byte+X being 0xFF
 // SOLVED : it wraps around
 bool CPU6502::IZX() {  // (zero page offset + x reg) value as pointer.
-																		// adding first and then dereference
+						class Stack:private RAM{
+//   public:
+//     void s_push(u_int8_t data);
+//     u_int8_t s_pop();
+//     u_int8_t s_top();
+// };												// adding first and then dereference
 
 																		// e.g. LDA ($70,X)
 
@@ -576,6 +581,60 @@ u_int8_t CPU6502::INY(){
 	setFlag(Z, Y == 0x00);
 	setFlag(N, Y & 0x80);
 	return 0;
+}
+
+// Instruction: Jump To Location
+// Function:    pc = address
+u_int8_t CPU6502::JMP() {
+	PC = abs_addr_fetched;
+	return 0;
+}
+
+// Instruction: Jump To Sub-Routine pushing return addr on stack
+// Function:    Push current pc to stack, pc = address
+// first high bit is pushed then low
+// fix it later''''''''''''''''''''
+// u_int8_t CPU6502::JSR() {
+	
+// 	bus->bus_write((u_int16_t)SP | 0x100, (PC >> 8) & 0x00FF);
+// 	SP--;
+// 	bus->bus_write((u_int16_t)SP | 0x100, PC & 0x00FF);
+// 	SP--;
+
+// 	PC = abs_addr_fetched;
+// 	return 0;
+// }
+
+// Instruction: Load The Accumulator
+// Function:    A = M
+// Flags Out:   N, Z
+u_int8_t CPU6502::LDA() {
+	A = data_fetched;
+	setFlag(Z, A == 0x00);
+	setFlag(N, A & 0x80);
+	return 1;
+}
+
+
+// Instruction: Load The X Register
+// Function:    X = M
+// Flags Out:   N, Z
+u_int8_t CPU6502::LDX() {
+	X = data_fetched;
+	setFlag(Z, X == 0x00);
+	setFlag(N, X & 0x80);
+	return 1;
+}
+
+
+// Instruction: Load The Y Register
+// Function:    Y = M
+// Flags Out:   N, Z
+u_int8_t CPU6502::LDY() {
+	Y = data_fetched;
+	setFlag(Z, Y == 0x00);
+	setFlag(N, Y & 0x80);
+	return 1;
 }
 
 
