@@ -637,6 +637,40 @@ u_int8_t CPU6502::LDY() {
 	return 1;
 }
 
+// Instruction: Shift one bit right
+// Function:    0 -> [76543210] -> C // goes to carry if 0th bit 1
+// Flags Out:   N, Z ,C
+u_int8_t CPU6502::LSR(){
+	if(opcode_lookup.at(opcode).addrModeName == CPU6502::IMP) {
+		setFlag(C, A & 0x01);
+		A = A >> 1;
+		setFlag(Z ,A == 0);
+		setFlag(N, A & 0x80);
+		return 0;
+	}
+	else {
+		setFlag(C, data_fetched & 0x01);
+		data_fetched = data_fetched >> 1;
+		setFlag(Z ,data_fetched == 0);
+		setFlag(N, data_fetched & 0x80);
+
+		bus->bus_write(abs_addr_fetched,data_fetched);
+		return 0;
+
+	}
+}
+
+// Instruction: Bitwise Logic OR
+// Function:    A = A | M
+// Flags Out:   N, Z
+u_int8_t CPU6502::ORA()
+{
+	A = A | data_fetched;
+	setFlag(Z, A == 0x00);
+	setFlag(N, A & 0x80);
+	return 1;
+}
+
 
 
 
