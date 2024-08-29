@@ -368,6 +368,21 @@ u_int8_t CPU6502::BEQ() {
 	return 0;
 }
 
+
+// Instruction : Test Bits in Memory with Accumulator
+// Function : bits 7 and 6 of operand are transfered to bit 7 and 6 of SR (N,V);
+// the zero-flag is set according to the result of the operand AND
+// the accumulator (set, if the result is zero, unset otherwise).
+// This allows a quick check of a few bits at once without affecting
+// any of the registers, other than the status register (SR).
+u_int8_t CPU6502::BIT(){
+	u_int8_t temp = A & data_fetched;
+	setFlag(Z, (temp & 0x00FF) == 0x00);
+	setFlag(N, data_fetched & (1 << 7));
+	setFlag(V, data_fetched & (1 << 6));
+	return 0;
+}
+
 // Instruction: Branch if Negative
 // Function:    if(N == 1) pc = address
 u_int8_t CPU6502::BMI() {
@@ -406,6 +421,30 @@ u_int8_t CPU6502::BPL()
 		}
 		PC = rel_addr_fetched;
 	}
+	return 0;
+}
+
+// Instruction: Break
+// Function:    Program Sourced Interrupt
+//			PC + 2 is pushed leaving extra byte of spacing for break mark
+//			(identify the reason of BRK)
+// FLAG : set I and B
+u_int8_t CPU6502::BRK() {
+	PC++; 
+	
+	setFlag(I, 1); // Enable Interrupts , BRK itself needs to respond	
+								// to interrupts while being sericed.
+	bus->bus_write(0x0100 + SP, (PC >> 8) & 0x00FF);
+	SP--;
+	bus->bus_write(0x0100 + SP, PC & 0x00FF);
+	SP--;
+
+	setFlag(B, 1); 
+	bus->bus_write(0x0100 + SP, STATUS);
+	SP--;
+	setFlag(B, 0);
+	// Location Break Interrupt Request Handler
+	PC = (u_int16_t)bus->bus_read(0xFFFE) | ((u_int16_t)bus->bus_read(0xFFFF) << 8);
 	return 0;
 }
 
@@ -762,11 +801,7 @@ u_int8_t CPU6502::ROR() {
 // Instruction: Return From Interrupt
 // Function:    The status register is pulled with the break flag
 //						and bit 5 ignored. Then PC is pulled from the stack.
-
-// can work with both the methods
-// my method that the PC is completely updated in addressing modes
-// so if PC was PUSHED instack instead of PC-1
-// now we get PC and we are not updating so its good
+// PC+2 was pushed and now is read exactly like it should be.
 u_int8_t CPU6502::RTI() {
 	SP++;
 	STATUS = bus->bus_read(0x0100 + SP);
@@ -781,6 +816,10 @@ u_int8_t CPU6502::RTI() {
 }
 
 // Instruction: Return From SubRoutine
+// can work with both the methods
+// my method that the PC is completely updated in addressing modes
+// so if PC was PUSHED instack instead of PC-1
+// now we get PC and we are not updating so its good
 u_int8_t CPU6502::RTS() {
 	SP++;
 	PC = (u_int16_t)bus->bus_read(0x0100 + SP);
@@ -897,6 +936,11 @@ u_int8_t CPU6502::TYA() {
 	A = A;
 	setFlag(Z, A == 0x00);
 	setFlag(N, A & 0x80);
+	return 0;
+}
+
+// This function captures illegal opcodes
+u_int8_t CPU6502::XXX() {
 	return 0;
 }
 
