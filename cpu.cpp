@@ -792,6 +792,29 @@ u_int8_t CPU6502::RTS() {
 	return 0;
 }
 
+// Instruction: Set Carry Flag
+// Function:    C = 1
+u_int8_t CPU6502::SEC() {
+	setFlag(C, true);
+	return 0;
+}
+
+
+// Instruction: Set Decimal Flag
+// Function:    D = 1
+u_int8_t CPU6502::SED() {
+	setFlag(D, true);
+	return 0;
+}
+
+
+// Instruction: Set Interrupt Flag / Enable Interrupts
+// Function:    I = 1
+u_int8_t CPU6502::SEI() {
+	setFlag(I, true);
+	return 0;
+}
+
 
 
 
