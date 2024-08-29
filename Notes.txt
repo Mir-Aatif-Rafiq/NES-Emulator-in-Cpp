@@ -166,3 +166,9 @@ the opcode only cares about what it wants like in AND it only cares about data f
 and it will be provided by all the ADDRESSING MODES to it , the most updted one
 bc the executor will always run the addr mode func first and then the opcode func.
 
+
+
+OPCODE : PHP() =  When an interrupt occurs, and the status register is pushed onto the stack,
+ 									the B flag is set to 1 if the interrupt was caused by a BRK instruction, 
+									 and to 0 if it was a hardware interrupt.
+
