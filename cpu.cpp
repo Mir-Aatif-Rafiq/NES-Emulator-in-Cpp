@@ -717,6 +717,82 @@ u_int8_t CPU6502::PLP() {
 	return 0;
 }
 
+// Instruction: Rotate One Bit Left (Memory or Accumulator)
+// Function:    C <- [76543210] <- C
+// FLAG: C,N,Z
+u_int8_t CPU6502::ROL() {
+	if (opcode_lookup[opcode].addrModeName == &CPU6502::IMP){
+		bool t_flag = A & 0x80;
+		A = (A<<1) | getFlag(C);
+		setFlag(C, t_flag);
+		setFlag(Z, A == 0);
+		setFlag(N, A & 0x80);
+	}
+	else{
+	u_int16_t temp = (u_int16_t)(data_fetched << 1) | getFlag(C);
+	setFlag(C, temp & 0xFF00);
+	setFlag(Z, (temp & 0x00FF) == 0x0000);
+	setFlag(N, temp & 0x0080);
+		bus->bus_write(abs_addr_fetched, temp & 0x00FF);
+	}
+	return 0;
+}
+
+// Instruction: Rotate One Bit Right (Memory or Accumulator)
+// Function:    C -> [76543210] -> C
+// FLAG: C,N,Z
+u_int8_t CPU6502::ROR() {
+	if (opcode_lookup[opcode].addrModeName == &CPU6502::IMP){
+		bool t_flag = A & 0x01;
+		A = (A>>1) | getFlag(C)<<7;
+		setFlag(C, t_flag);
+		setFlag(Z, A == 0);
+		setFlag(N, A & 0x80);
+	}
+	else{
+		bool t_flag = data_fetched & 0x01;
+		u_int16_t temp = (u_int16_t)(data_fetched >> 1) | getFlag(C)<<7;
+		setFlag(C, t_flag);
+		setFlag(Z, (temp & 0x00FF) == 0x00);
+		setFlag(N, temp & 0x0080);
+		bus->bus_write(abs_addr_fetched, temp & 0x00FF);
+	}
+	return 0;
+}
+
+// Instruction: Return From Interrupt
+// Function:    The status register is pulled with the break flag
+//						and bit 5 ignored. Then PC is pulled from the stack.
+
+// can work with both the methods
+// my method that the PC is completely updated in addressing modes
+// so if PC was PUSHED instack instead of PC-1
+// now we get PC and we are not updating so its good
+u_int8_t CPU6502::RTI() {
+	SP++;
+	STATUS = bus->bus_read(0x0100 + SP);
+	setFlag(B, 0); // cleared after returning
+	setFlag(B, 0);
+
+	SP++;
+	PC = (u_int16_t)bus->bus_read(0x0100 + SP);
+	SP++;
+	PC |= (u_int16_t)bus->bus_read(0x0100 + SP) << 8;
+	return 0;
+}
+
+// FIX when youll fix JSR()'''''''''''
+// // Instruction: Return From SubRoutine
+// u_int8_t CPU6502::RTS() {
+// 	SP++;
+// 	PC = (u_int16_t)bus->bus_read(0x0100 + SP);
+// 	SP++;
+// 	PC |= (u_int16_t)bus->bus_read(0x0100 + SP) << 8;
+	
+	
+// 	return 0;
+// }
+
 
 
 
