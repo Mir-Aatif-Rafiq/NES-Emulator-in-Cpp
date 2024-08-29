@@ -671,6 +671,52 @@ u_int8_t CPU6502::ORA()
 	return 1;
 }
 
+// Instruction: Push Accumulator to Stack
+// Function:    A -> stack
+u_int8_t CPU6502::PHA() {
+	bus->bus_write(0x0100+SP,A);
+	SP--;
+	return 0;
+}
+
+
+// Instruction: Push Status Register to Stack
+// Function:    status -> stack
+// Note:        Break flag and unused is set to 1 before push
+
+// When an interrupt occurs, and the status register is pushed onto the stack,
+// the B flag is set to 1 if the interrupt was caused by a BRK instruction, 
+// and to 0 if it was a hardware interrupt.
+u_int8_t CPU6502::PHP() {
+	bus->bus_write(0x0100 + SP, STATUS | B | U);
+	setFlag(B, 0);
+	setFlag(U, 0);
+	SP--;
+	return 0;
+}
+
+
+// Instruction: Pop Accumulator off Stack
+// Function:    A <- stack
+// Flags Out:   N, Z
+u_int8_t CPU6502::PLA() {
+	SP++;
+	A = bus->bus_read(0x0100 + SP);
+	setFlag(Z, A == 0x00);
+	setFlag(N, A & 0x80);
+	return 0;
+}
+
+
+// Instruction: Pop Status Register off Stack
+// Function:    Status <- stack
+u_int8_t CPU6502::PLP() {
+	SP++;
+	STATUS = bus->bus_read(0x0100 + SP);
+	setFlag(U, 1); // its said that its always 1
+	return 0;
+}
+
 
 
 
