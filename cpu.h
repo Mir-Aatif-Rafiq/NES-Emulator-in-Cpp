@@ -41,6 +41,7 @@ class CPU6502 {
 	  };
 
 		Bus* bus = nullptr;
+		// Total number of instruction cycles since the last reset.
 		u_int64_t cycles = 0;
 
   public:
@@ -256,7 +257,9 @@ class CPU6502 {
 
 class RAM {
 	public:
+		// 16 address bits give 65,536 byte locations: $0000 through $FFFF.
 		static constexpr std::size_t size = 0x10000;
+		// Each 6502 memory location stores one 8-bit byte.
 		std::vector<u_int8_t> ram;
 
 		RAM(){

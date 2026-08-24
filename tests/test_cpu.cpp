@@ -3,6 +3,11 @@
 
 #include "../cpu.h"
 
+/*
+* Every test gets a fresh CPU, RAM and Bus so one program cannot leave flags or
+* memory behind for the next program. Programs are written as real opcode bytes
+* because that is also how a 6502 reads them from memory.
+*/
 class TestMachine {
 public:
 	CPU6502 cpu;
@@ -32,6 +37,7 @@ bool expect(bool condition, const std::string& test_name) {
 }
 
 bool test_reset() {
+	// Changing A before reset makes sure reset is actually restoring CPU state.
 	TestMachine machine;
 	machine.cpu.A = 0xAA;
 	machine.cpu.reset();
@@ -42,6 +48,7 @@ bool test_reset() {
 }
 
 bool test_load_add_and_store() {
+	// LDA #$05, ADC #$03, STA $0200
 	TestMachine machine;
 	machine.load({0xA9, 0x05, 0x69, 0x03, 0x8D, 0x00, 0x02});
 	machine.cpu.reset();
@@ -53,6 +60,7 @@ bool test_load_add_and_store() {
 }
 
 bool test_adc_flags() {
+	// $50 + $50 produces signed overflow and a negative binary result.
 	TestMachine machine;
 	machine.load({0xA9, 0x50, 0x69, 0x50});
 	machine.cpu.reset();
@@ -65,6 +73,7 @@ bool test_adc_flags() {
 }
 
 bool test_sbc() {
+	// SEC means there is no incoming borrow: $10 - $01 = $0F.
 	TestMachine machine;
 	machine.load({0xA9, 0x10, 0x38, 0xE9, 0x01});
 	machine.cpu.reset();
@@ -76,6 +85,7 @@ bool test_sbc() {
 }
 
 bool test_decimal_mode() {
+	// SED changes ADC/SBC from normal binary arithmetic to packed BCD arithmetic.
 	TestMachine addition;
 	addition.load({0xF8, 0x18, 0xA9, 0x45, 0x69, 0x55});
 	addition.cpu.reset();
@@ -95,6 +105,7 @@ bool test_decimal_mode() {
 }
 
 bool test_branch() {
+	// BEQ jumps over LDA #$FF and continues at LDA #$2A.
 	TestMachine machine;
 	machine.load({0xA9, 0x00, 0xF0, 0x02, 0xA9, 0xFF, 0xA9, 0x2A});
 	machine.cpu.reset();
@@ -106,6 +117,7 @@ bool test_branch() {
 }
 
 bool test_page_crossing_cycle() {
+	// $80FF + X crosses into page $81, which costs one extra cycle for LDA.
 	TestMachine machine;
 	machine.load({0xA2, 0x01, 0xBD, 0xFF, 0x80});
 	machine.bus.bus_write(0x8100, 0x7B);
@@ -117,6 +129,7 @@ bool test_page_crossing_cycle() {
 }
 
 bool test_zero_page_pointer_wrap() {
+	// The high pointer byte after $00FF must wrap to $0000, not read $0100.
 	TestMachine machine;
 	machine.load({0xA0, 0x00, 0xB1, 0xFF});
 	machine.bus.bus_write(0x00FF, 0x00);
@@ -130,6 +143,7 @@ bool test_zero_page_pointer_wrap() {
 }
 
 bool test_subroutine_stack() {
+	// JSR enters $9000 and RTS must return to the LDA at $8003.
 	TestMachine machine;
 	machine.load({0x20, 0x00, 0x90, 0xA9, 0x2A});
 	machine.load({0xA9, 0x11, 0x60}, 0x9000);
@@ -143,6 +157,7 @@ bool test_subroutine_stack() {
 }
 
 bool test_transfer_and_decrement() {
+	// This catches the old TYA A=A and DEX checking-Y bugs.
 	TestMachine machine;
 	machine.load({0xA0, 0x42, 0x98, 0xA2, 0x00, 0xCA});
 	machine.cpu.reset();
@@ -171,6 +186,7 @@ bool test_brk_and_rti() {
 }
 
 bool test_irq() {
+	// CLI allows IRQ, then RTI should restore the interrupted address $8001.
 	TestMachine machine;
 	machine.load({0x58, 0xEA}); // CLI, NOP
 	machine.load({0x40}, 0x9000);
@@ -186,6 +202,7 @@ bool test_irq() {
 }
 
 bool test_last_memory_address() {
+	// $FFFF was outside the old 0xFFFF-sized vector.
 	TestMachine machine;
 	machine.bus.bus_write(0xFFFF, 0xA5);
 	return expect(machine.bus.bus_read(0xFFFF) == 0xA5,

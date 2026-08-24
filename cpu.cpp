@@ -15,6 +15,8 @@
 Bus::Bus(CPU6502& cpu, RAM& ram){
 	b_cpu6502 = &cpu;
 	b_ram = &ram;
+	// CPU keeps the address of this bus because all instruction reads and
+	// writes have to go through the same memory connection.
 	cpu.connectBus(*this);
 }
 
@@ -32,14 +34,25 @@ u_int8_t Bus::bus_read(u_int16_t address) const {
 	return b_ram->ram.at(address);
 }
 
+/*
+* Connect the CPU to the system bus.
+* The CPU does not own the bus. It only keeps a pointer to the bus made in main.
+*/
 void CPU6502::connectBus(Bus& system_bus) {
 	bus = &system_bus;
 }
 
+// Useful before reset or execution because a CPU without a bus cannot read memory.
 bool CPU6502::isConnected() const {
 	return bus != nullptr;
 }
 
+/*
+* RESET:
+* A reset clears the general registers, places the stack pointer near the top
+* of the stack page and loads PC from the reset vector stored at $FFFC-$FFFD.
+* The lower byte is stored first because the 6502 is little endian.
+*/
 void CPU6502::reset() {
 	assert(bus != nullptr);
 	A = 0x00;
@@ -55,6 +68,11 @@ void CPU6502::reset() {
 	cycles = 7;
 }
 
+/*
+* IRQ is a maskable hardware interrupt.
+* It is ignored while the I flag is set. Otherwise the current PC and status
+* are pushed to the stack and execution continues from the IRQ vector.
+*/
 void CPU6502::irq() {
 	assert(bus != nullptr);
 	if (getFlag(I)) {
@@ -72,6 +90,10 @@ void CPU6502::irq() {
 	cycles += 7;
 }
 
+/*
+* NMI follows the same stack sequence as IRQ but it cannot be disabled by the
+* I flag. Its handler address is stored separately at $FFFA-$FFFB.
+*/
 void CPU6502::nmi() {
 	assert(bus != nullptr);
 	bus->bus_write(0x0100 + SP--, (PC >> 8) & 0x00FF);
@@ -85,6 +107,13 @@ void CPU6502::nmi() {
 	cycles += 8;
 }
 
+/*
+* Execute one complete instruction:
+* 1. read the opcode at PC
+* 2. run its addressing mode to fetch the operand/effective address
+* 3. run the actual operation
+* 4. add the normal cycles and a possible page-crossing cycle
+*/
 void CPU6502::step() {
 	assert(bus != nullptr);
 	opcode = bus->bus_read(PC);
@@ -277,6 +306,8 @@ bool CPU6502::IND() { // indirect mode is pointer only for jumps
 // SOLVED : it wraps around
 bool CPU6502::IZX() {  // (zero page offset + x reg) value as pointer.
 	// e.g. LDA ($70,X)
+	// First add X to $70, then read the two-byte address from zero page.
+	// Casting pointer + 1 back to 8 bit handles the $FF -> $00 wrap around.
 
 	const u_int8_t pointer = bus->bus_read(PC + 1) + X;
 	lo_data_fetched = bus->bus_read(pointer);
@@ -295,6 +326,8 @@ bool CPU6502::IZX() {  // (zero page offset + x reg) value as pointer.
 bool  CPU6502::IZY() { // Post indexed mode first derefernce than add Y 
 																		// only works with Y reg
 																		// e.g. LDA ($79),Y
+	// The pointer itself is read from zero page and Y is added only after
+	// the full 16-bit address has been formed.
 	const u_int8_t pointer = bus->bus_read(PC + 1);
 	lo_data_fetched = bus->bus_read(pointer);
 	hi_data_fecthed = bus->bus_read(static_cast<u_int8_t>(pointer + 1));
@@ -318,6 +351,8 @@ bool  CPU6502::REL() { // relative wrt PC but signed 2s compliment
 																		// max branch possible 127 bytes
 																		// remember to minus the PC -1 before adding offset.
 	lo_data_fetched = bus->bus_read(PC + 1);
+	// Converting the byte to int8_t gives the signed range -128 to +127.
+	// PC already needs to point after the two-byte branch instruction.
 	const auto offset = static_cast<std::int8_t>(lo_data_fetched);
 	rel_addr_fetched = static_cast<u_int16_t>(PC + 2 + offset);
 	PC +=2;
@@ -327,13 +362,17 @@ bool  CPU6502::REL() { // relative wrt PC but signed 2s compliment
 
 
 
-// Add memory and carry to the accumulator.
+// Instruction: Add with Carry
+// Function:    A = A + M + C
+// Flags Out:   N, V, Z, C
+// Decimal mode treats both nibbles as decimal digits instead of one binary byte.
 u_int8_t CPU6502::ADC() {
 	const u_int8_t carry_in = getFlag(C) ? 1 : 0;
 	const u_int16_t binary_sum = static_cast<u_int16_t>(A) + data_fetched + carry_in;
 	setFlag(V, (~(A ^ data_fetched) & (A ^ binary_sum) & 0x0080) != 0);
 
 	if (getFlag(D)) {
+		// Correct the lower and upper nibbles separately when a digit exceeds 9.
 		u_int16_t low = (A & 0x0F) + (data_fetched & 0x0F) + carry_in;
 		u_int16_t high = (A >> 4) + (data_fetched >> 4);
 		if (low > 9) {
@@ -778,6 +817,7 @@ u_int8_t CPU6502::ORA()
 }
 
 u_int8_t CPU6502::NOP() {
+	// No operation changes no register; PC was already updated by IMP.
 	return 0;
 }
 
@@ -877,6 +917,7 @@ u_int8_t CPU6502::ROR() {
 u_int8_t CPU6502::RTI() {
 	SP++;
 	STATUS = bus->bus_read(0x0100 + SP);
+	// B is not a physical stored flag and U is kept high inside the emulator.
 	setFlag(B, false);
 	setFlag(U, true);
 
@@ -903,7 +944,10 @@ u_int8_t CPU6502::RTS() {
 	return 0;
 }
 
-// Subtract memory and the inverted carry (borrow) from the accumulator.
+// Instruction: Subtract with Carry
+// Function:    A = A - M - (1 - C)
+// Flags Out:   N, V, Z, C
+// Carry works as an inverted borrow on the 6502: set means no borrow.
 u_int8_t CPU6502::SBC() {
 	const int borrow = getFlag(C) ? 0 : 1;
 	const int difference = static_cast<int>(A) - data_fetched - borrow;
@@ -912,6 +956,7 @@ u_int8_t CPU6502::SBC() {
 	setFlag(C, difference >= 0);
 
 	if (getFlag(D)) {
+		// Borrow is corrected separately for the two packed decimal digits.
 		int low = (A & 0x0F) - (data_fetched & 0x0F) - borrow;
 		int high = (A >> 4) - (data_fetched >> 4);
 		if (low < 0) {
@@ -1059,5 +1104,6 @@ u_int8_t CPU6502::XXX() {
 
 
 void CPU6502::executor(){
+	// Kept for compatibility with the original interface. One call runs one opcode.
 	step();
 }
