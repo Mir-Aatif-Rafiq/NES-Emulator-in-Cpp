@@ -1,6 +1,11 @@
 
-#include <iostream>
+#pragma once
+
+#include <cstddef>
+#include <cstdint>
 #include <vector>
+
+class Bus;
 
 class CPU6502 {
 	public: 
@@ -28,17 +33,23 @@ class CPU6502 {
 		  C = (1 << 0),	// Carry Bit
 		  Z = (1 << 1),	// Zero
 		  I = (1 << 2),	// Disable Interrupts
-		  D = (1 << 3),	// Decimal Mode (unused in this implementation)
+		  D = (1 << 3),	// Decimal Mode
 		  B = (1 << 4),	// Break
 		  U = (1 << 5),	// Unused
 		  V = (1 << 6),	// Overflow
 		  N = (1 << 7),	// Negative
 	  };
 
-		Clock clk;
-    Bus* bus;
+		Bus* bus = nullptr;
+		u_int64_t cycles = 0;
 
   public:
+		void connectBus(Bus& system_bus);
+		void reset();
+		void irq();
+		void nmi();
+		void step();
+		bool isConnected() const;
     void setFlag(FLAGS6502 flag, bool condition);
     bool getFlag(FLAGS6502 flag);
 
@@ -85,7 +96,7 @@ class CPU6502 {
 
 	private:
     std::vector<CPU6502::Instruction> opcode_lookup = {
-      {"BRK", &CPU6502::BRK, &CPU6502::IMM, 7}, {"ORA", &CPU6502::ORA, &CPU6502::IZX, 6},
+      {"BRK", &CPU6502::BRK, &CPU6502::IMP, 7}, {"ORA", &CPU6502::ORA, &CPU6502::IZX, 6},
       {"???", &CPU6502::XXX, &CPU6502::IMP, 2}, {"???", &CPU6502::XXX, &CPU6502::IMP, 8},
       {"???", &CPU6502::NOP, &CPU6502::IMP, 3}, {"ORA", &CPU6502::ORA, &CPU6502::ZP0, 3},
       {"ASL", &CPU6502::ASL, &CPU6502::ZP0, 5}, {"???", &CPU6502::XXX, &CPU6502::IMP, 5},
@@ -245,11 +256,11 @@ class CPU6502 {
 
 class RAM {
 	public:
-		int size = 0xFFFF;
-		std::vector<u_int16_t> ram;
+		static constexpr std::size_t size = 0x10000;
+		std::vector<u_int8_t> ram;
 
 		RAM(){
-			ram = std::vector<u_int16_t>(size,0x0000);
+			ram = std::vector<u_int8_t>(size, 0x00);
 		}
 };
 
@@ -259,29 +270,9 @@ class Bus {
 		RAM* b_ram;
 	public: 
 		Bus(CPU6502& cpu, RAM& ram);
-		bool write_enable;
-		bool read_enable;
-		
-
 		void bus_write(u_int16_t address, u_int8_t data);
-		u_int8_t bus_read(u_int16_t address);
-		// void read_enable();   // not sure we are even gonna emulate these two
-		// void write_enable();
+		u_int8_t bus_read(u_int16_t address) const;
 };
-
-/*
-* currently clock has no functionality apart from keeping 
-* tabs on how many clk cycles has passed and maybe it might
-* be used later bc many opcodes having different overflows 
-* can alter the number of clock cycles they take.
-*/
-class Clock {
-	public: 
-		u_int64_t clock_cycles = 0;
-
-};
-
-
 
 /*
 * for now i dont see any use of creating a class for different addressing

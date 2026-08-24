@@ -15,6 +15,7 @@
 Bus::Bus(CPU6502& cpu, RAM& ram){
 	b_cpu6502 = &cpu;
 	b_ram = &ram;
+	cpu.connectBus(*this);
 }
 
 // writing on ram
@@ -25,10 +26,76 @@ void Bus::bus_write(u_int16_t address, u_int8_t data){ // R/W are wrt to ram
 }
 
 // reading from ram
-u_int8_t Bus::bus_read(u_int16_t address){
+u_int8_t Bus::bus_read(u_int16_t address) const {
 	assert(b_ram!=nullptr);
 	assert(address >= 0x0000 && address <= 0xFFFF );
 	return b_ram->ram.at(address);
+}
+
+void CPU6502::connectBus(Bus& system_bus) {
+	bus = &system_bus;
+}
+
+bool CPU6502::isConnected() const {
+	return bus != nullptr;
+}
+
+void CPU6502::reset() {
+	assert(bus != nullptr);
+	A = 0x00;
+	X = 0x00;
+	Y = 0x00;
+	SP = 0xFD;
+	STATUS = U | I;
+	PC = static_cast<u_int16_t>(bus->bus_read(0xFFFC)) |
+		(static_cast<u_int16_t>(bus->bus_read(0xFFFD)) << 8);
+	data_fetched = 0x00;
+	abs_addr_fetched = 0x0000;
+	rel_addr_fetched = 0x0000;
+	cycles = 7;
+}
+
+void CPU6502::irq() {
+	assert(bus != nullptr);
+	if (getFlag(I)) {
+		return;
+	}
+
+	bus->bus_write(0x0100 + SP--, (PC >> 8) & 0x00FF);
+	bus->bus_write(0x0100 + SP--, PC & 0x00FF);
+	setFlag(B, false);
+	setFlag(U, true);
+	bus->bus_write(0x0100 + SP--, STATUS);
+	setFlag(I, true);
+	PC = static_cast<u_int16_t>(bus->bus_read(0xFFFE)) |
+		(static_cast<u_int16_t>(bus->bus_read(0xFFFF)) << 8);
+	cycles += 7;
+}
+
+void CPU6502::nmi() {
+	assert(bus != nullptr);
+	bus->bus_write(0x0100 + SP--, (PC >> 8) & 0x00FF);
+	bus->bus_write(0x0100 + SP--, PC & 0x00FF);
+	setFlag(B, false);
+	setFlag(U, true);
+	bus->bus_write(0x0100 + SP--, STATUS);
+	setFlag(I, true);
+	PC = static_cast<u_int16_t>(bus->bus_read(0xFFFA)) |
+		(static_cast<u_int16_t>(bus->bus_read(0xFFFB)) << 8);
+	cycles += 8;
+}
+
+void CPU6502::step() {
+	assert(bus != nullptr);
+	opcode = bus->bus_read(PC);
+	Instruction& instruction = opcode_lookup.at(opcode);
+	const bool page_crossed = (this->*instruction.addrModeName)();
+	cycles += instruction.clock_cycles;
+	const bool operation_uses_extra_cycle = (this->*instruction.opcodeName)();
+	if (page_crossed && operation_uses_extra_cycle) {
+		cycles++;
+	}
+	setFlag(U, true);
 }
 
 /*
@@ -121,6 +188,7 @@ bool CPU6502::ZPY() {
 	PC+=2;
 	return 0;
 }
+
 // ZPX and ZPY are zero page indexed with contents of X and Y register
 
 // similarly with ABX and ABY , some address then offset with X and Y reg
@@ -208,28 +276,11 @@ bool CPU6502::IND() { // indirect mode is pointer only for jumps
 // i think here we also have to tackle the conditn of lo_byte+X being 0xFF
 // SOLVED : it wraps around
 bool CPU6502::IZX() {  // (zero page offset + x reg) value as pointer.
-						class Stack:private RAM{
-//   public:
-//     void s_push(u_int8_t data);
-//     u_int8_t s_pop();
-//     u_int8_t s_top();
-// };												// adding first and then dereference
+	// e.g. LDA ($70,X)
 
-																		// e.g. LDA ($70,X)
-
-	rel_addr_fetched = (0x0000 + bus->bus_read(PC + 1) + X) & 0x00FF;
-																					 // even if wrap around happens,
-																					 // it will get handled
-
-  if(rel_addr_fetched & 0xFF == 0xFF){ // trigger CPU bug of wrap around
-		lo_data_fetched = bus->bus_read(rel_addr_fetched);
-		hi_data_fecthed = bus->bus_read(rel_addr_fetched & 0xFF00);
-	}
-
-	else {
-		lo_data_fetched = bus->bus_read(rel_addr_fetched);
-		hi_data_fecthed = bus->bus_read(rel_addr_fetched + 1);
-	}
+	const u_int8_t pointer = bus->bus_read(PC + 1) + X;
+	lo_data_fetched = bus->bus_read(pointer);
+	hi_data_fecthed = bus->bus_read(static_cast<u_int8_t>(pointer + 1));
 
 	abs_addr_fetched = (hi_data_fecthed << 8) | lo_data_fetched;
 	
@@ -244,13 +295,9 @@ bool CPU6502::IZX() {  // (zero page offset + x reg) value as pointer.
 bool  CPU6502::IZY() { // Post indexed mode first derefernce than add Y 
 																		// only works with Y reg
 																		// e.g. LDA ($79),Y
-	rel_addr_fetched = 0x0000 + bus->bus_read(PC + 1);
-																					 // even if wrap around happens,
-																					 // it will get handled
-
-
-	lo_data_fetched = bus->bus_read(rel_addr_fetched);
-	hi_data_fecthed = bus->bus_read(rel_addr_fetched + 1);
+	const u_int8_t pointer = bus->bus_read(PC + 1);
+	lo_data_fetched = bus->bus_read(pointer);
+	hi_data_fecthed = bus->bus_read(static_cast<u_int8_t>(pointer + 1));
 
 	abs_addr_fetched = (hi_data_fecthed << 8) | lo_data_fetched;
 	abs_addr_fetched += Y;
@@ -271,22 +318,42 @@ bool  CPU6502::REL() { // relative wrt PC but signed 2s compliment
 																		// max branch possible 127 bytes
 																		// remember to minus the PC -1 before adding offset.
 	lo_data_fetched = bus->bus_read(PC + 1);
-
-	if(lo_data_fetched & 0x80 != 0){
-		u_int16_t temp = (u_int16_t)lo_data_fetched;
-		temp |= 0xFF00; // extending to 16
-		temp = ~(temp - 1); // 2s comp calc
-		rel_addr_fetched = (PC + 2 - temp) & 0xFF;
-	}
-
-	else {
-		rel_addr_fetched = (PC + 2 + lo_data_fetched) & 0x00FF;
-	}
+	const auto offset = static_cast<std::int8_t>(lo_data_fetched);
+	rel_addr_fetched = static_cast<u_int16_t>(PC + 2 + offset);
 	PC +=2;
 	return 0;
 }
 
 
+
+
+// Add memory and carry to the accumulator.
+u_int8_t CPU6502::ADC() {
+	const u_int8_t carry_in = getFlag(C) ? 1 : 0;
+	const u_int16_t binary_sum = static_cast<u_int16_t>(A) + data_fetched + carry_in;
+	setFlag(V, (~(A ^ data_fetched) & (A ^ binary_sum) & 0x0080) != 0);
+
+	if (getFlag(D)) {
+		u_int16_t low = (A & 0x0F) + (data_fetched & 0x0F) + carry_in;
+		u_int16_t high = (A >> 4) + (data_fetched >> 4);
+		if (low > 9) {
+			low += 6;
+			high++;
+		}
+		if (high > 9) {
+			high += 6;
+		}
+		setFlag(C, high > 0x0F);
+		A = static_cast<u_int8_t>((high << 4) | (low & 0x0F));
+	} else {
+		setFlag(C, binary_sum > 0x00FF);
+		A = binary_sum & 0x00FF;
+	}
+
+	setFlag(Z, A == 0);
+	setFlag(N, A & 0x80);
+	return 1;
+}
 
 
 // Instruction: Bitwise Logic AND
@@ -297,6 +364,7 @@ u_int8_t CPU6502::AND() {
 
 	setFlag(Z ,A == 0);
 	setFlag(N, A & 0x80);
+	return 1;
 }
 
 
@@ -304,7 +372,7 @@ u_int8_t CPU6502::AND() {
 // Function:    A = C <- (A << 1) <- 0
 // Flags Out:   N, Z, C
 u_int8_t CPU6502::ASL() {	
-	if(opcode_lookup.at(opcode).addrModeName == CPU6502::IMP) {
+	if(opcode_lookup.at(opcode).addrModeName == &CPU6502::IMP) {
 		setFlag(C, A & 0x80);
 		A = A << 1;
 		setFlag(Z ,A == 0);
@@ -330,7 +398,7 @@ u_int8_t CPU6502::BCC() {
 	if (getFlag(C) == 0) {
 
 		cycles++; // adding cycle bc in executor default clk val will always get added
-		if(PC-2 + lo_data_fetched & 0xFF00 != PC-2){
+		if ((PC & 0xFF00) != (rel_addr_fetched & 0xFF00)) {
 			cycles++;
 		}
 		PC = rel_addr_fetched;
@@ -345,7 +413,7 @@ u_int8_t CPU6502::BCS() {
 	if (getFlag(C) == 1) {
 
 		cycles++;
-		if(PC-2 + lo_data_fetched & 0xFF00 != PC-2){
+		if ((PC & 0xFF00) != (rel_addr_fetched & 0xFF00)) {
 			cycles++;
 		}
 		PC = rel_addr_fetched;
@@ -360,7 +428,7 @@ u_int8_t CPU6502::BEQ() {
 	if (getFlag(Z) == 1) {
 
 		cycles++;
-		if(PC-2 + lo_data_fetched & 0xFF00 != PC-2){
+		if ((PC & 0xFF00) != (rel_addr_fetched & 0xFF00)) {
 			cycles++;
 		}
 		PC = rel_addr_fetched;
@@ -388,7 +456,7 @@ u_int8_t CPU6502::BIT(){
 u_int8_t CPU6502::BMI() {
 	if (getFlag(N) == 1) {
 	cycles++;
-		if(PC-2 + lo_data_fetched & 0xFF00 != PC-2){
+		if ((PC & 0xFF00) != (rel_addr_fetched & 0xFF00)) {
 			cycles++;
 		}
 		PC = rel_addr_fetched;
@@ -402,7 +470,7 @@ u_int8_t CPU6502::BMI() {
 u_int8_t CPU6502::BNE() {
 	if (getFlag(Z) == 0) {
 	cycles++;
-		if(PC-2 + lo_data_fetched & 0xFF00 != PC-2){
+		if ((PC & 0xFF00) != (rel_addr_fetched & 0xFF00)) {
 			cycles++;
 		}
 		PC = rel_addr_fetched;
@@ -416,7 +484,7 @@ u_int8_t CPU6502::BPL()
 {
 	if (getFlag(N) == 0){
 	cycles++;
-		if(PC-2 + lo_data_fetched & 0xFF00 != PC-2){
+		if ((PC & 0xFF00) != (rel_addr_fetched & 0xFF00)) {
 			cycles++;
 		}
 		PC = rel_addr_fetched;
@@ -431,9 +499,7 @@ u_int8_t CPU6502::BPL()
 // FLAG : set I and B
 u_int8_t CPU6502::BRK() {
 	PC++; 
-	
-	setFlag(I, 1); // Enable Interrupts , BRK itself needs to respond	
-								// to interrupts while being sericed.
+
 	bus->bus_write(0x0100 + SP, (PC >> 8) & 0x00FF);
 	SP--;
 	bus->bus_write(0x0100 + SP, PC & 0x00FF);
@@ -443,6 +509,7 @@ u_int8_t CPU6502::BRK() {
 	bus->bus_write(0x0100 + SP, STATUS);
 	SP--;
 	setFlag(B, 0);
+	setFlag(I, 1); // mask regular IRQs while the handler is running
 	// Location Break Interrupt Request Handler
 	PC = (u_int16_t)bus->bus_read(0xFFFE) | ((u_int16_t)bus->bus_read(0xFFFF) << 8);
 	return 0;
@@ -454,7 +521,7 @@ u_int8_t CPU6502::BVC()
 {
 	if (getFlag(V) == 0){
 	cycles++;
-		if(PC-2 + lo_data_fetched & 0xFF00 != PC-2){
+		if ((PC & 0xFF00) != (rel_addr_fetched & 0xFF00)) {
 			cycles++;
 		}
 		PC = rel_addr_fetched;
@@ -469,7 +536,7 @@ u_int8_t CPU6502::BVS()
 {
 	if (getFlag(V) == 1){
 	cycles++;
-		if(PC-2 + lo_data_fetched & 0xFF00 != PC-2){
+		if ((PC & 0xFF00) != (rel_addr_fetched & 0xFF00)) {
 			cycles++;
 		}
 		PC = rel_addr_fetched;
@@ -543,6 +610,7 @@ u_int8_t CPU6502::CPY() {
 	setFlag(N, temp & 0x80);
 	setFlag(C, Y >= data_fetched);
 	setFlag(Z, temp == 0);
+	return 0;
 }
 
 // Instruction: Decrement Value at Memory Location
@@ -562,8 +630,8 @@ u_int8_t CPU6502::DEC() {
 // Flags Out:   N, Z
 u_int8_t CPU6502::DEX() {
 	X--;
-	setFlag(Z, Y == 0x00);
-	setFlag(N, Y & 0x80);
+	setFlag(Z, X == 0x00);
+	setFlag(N, X & 0x80);
 	return 0;
 }
 
@@ -679,7 +747,7 @@ u_int8_t CPU6502::LDY() {
 // Function:    0 -> [76543210] -> C // goes to carry if 0th bit 1
 // Flags Out:   N, Z ,C
 u_int8_t CPU6502::LSR(){
-	if(opcode_lookup.at(opcode).addrModeName == CPU6502::IMP) {
+	if(opcode_lookup.at(opcode).addrModeName == &CPU6502::IMP) {
 		setFlag(C, A & 0x01);
 		A = A >> 1;
 		setFlag(Z ,A == 0);
@@ -707,6 +775,10 @@ u_int8_t CPU6502::ORA()
 	setFlag(Z, A == 0x00);
 	setFlag(N, A & 0x80);
 	return 1;
+}
+
+u_int8_t CPU6502::NOP() {
+	return 0;
 }
 
 // Instruction: Push Accumulator to Stack
@@ -805,8 +877,8 @@ u_int8_t CPU6502::ROR() {
 u_int8_t CPU6502::RTI() {
 	SP++;
 	STATUS = bus->bus_read(0x0100 + SP);
-	setFlag(B, 0); // cleared after returning
-	setFlag(B, 0);
+	setFlag(B, false);
+	setFlag(U, true);
 
 	SP++;
 	PC = (u_int16_t)bus->bus_read(0x0100 + SP);
@@ -829,6 +901,34 @@ u_int8_t CPU6502::RTS() {
 	PC++;
 	
 	return 0;
+}
+
+// Subtract memory and the inverted carry (borrow) from the accumulator.
+u_int8_t CPU6502::SBC() {
+	const int borrow = getFlag(C) ? 0 : 1;
+	const int difference = static_cast<int>(A) - data_fetched - borrow;
+	const u_int8_t binary_result = difference & 0x00FF;
+	setFlag(V, ((A ^ data_fetched) & (A ^ binary_result) & 0x80) != 0);
+	setFlag(C, difference >= 0);
+
+	if (getFlag(D)) {
+		int low = (A & 0x0F) - (data_fetched & 0x0F) - borrow;
+		int high = (A >> 4) - (data_fetched >> 4);
+		if (low < 0) {
+			low -= 6;
+			high--;
+		}
+		if (high < 0) {
+			high -= 6;
+		}
+		A = static_cast<u_int8_t>(((high & 0x0F) << 4) | (low & 0x0F));
+	} else {
+		A = binary_result;
+	}
+
+	setFlag(Z, A == 0);
+	setFlag(N, A & 0x80);
+	return 1;
 }
 
 // Instruction: Set Carry Flag
@@ -933,7 +1033,7 @@ u_int8_t CPU6502::TXS() {
 // Function:    A = Y
 // Flags Out:   N, Z
 u_int8_t CPU6502::TYA() {
-	A = A;
+	A = Y;
 	setFlag(Z, A == 0x00);
 	setFlag(N, A & 0x80);
 	return 0;
@@ -959,8 +1059,5 @@ u_int8_t CPU6502::XXX() {
 
 
 void CPU6502::executor(){
-
-	while(){
-
-	}
+	step();
 }
