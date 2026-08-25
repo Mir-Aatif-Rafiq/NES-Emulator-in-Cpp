@@ -1,33 +1,37 @@
+#include <exception>
 #include <iomanip>
 #include <iostream>
 
 #include "cpu.h"
+#include "executor.h"
 
-int main() {
+int main(int argument_count, char* arguments[]) {
 	CPU6502 cpu;
 	RAM ram;
 	Bus bus(cpu, ram);
+	Executor executor(cpu, bus);
+	const std::string program_file = argument_count > 1
+		? arguments[1] : "examples/add_and_store.asm";
 
-	// Reset vector points to the small program at $8000.
-	bus.bus_write(0xFFFC, 0x00);
-	bus.bus_write(0xFFFD, 0x80);
+	try {
+		// The executor now owns the complete host-side flow: parse the text,
+		// assemble it, load RAM, set the reset vector and run the CPU.
+		executor.loadFile(program_file);
+		const Executor::Result result = executor.run();
 
-	// LDA #$05, ADC #$03, STA $0200
-	bus.bus_write(0x8000, 0xA9);
-	bus.bus_write(0x8001, 0x05);
-	bus.bus_write(0x8002, 0x69);
-	bus.bus_write(0x8003, 0x03);
-	bus.bus_write(0x8004, 0x8D);
-	bus.bus_write(0x8005, 0x00);
-	bus.bus_write(0x8006, 0x02);
+		std::cout << "Loaded: " << program_file << '\n'
+			<< "Stopped: " << stopReasonName(result.reason) << '\n'
+			<< "Instructions: " << std::dec << result.instructions << '\n'
+			<< "Cycles (including reset): " << result.cycles << '\n'
+			<< "PC: $" << std::hex << std::uppercase << std::setw(4)
+			<< std::setfill('0') << result.final_pc << '\n'
+			<< "A: $" << std::setw(2) << static_cast<int>(cpu.A)
+			<< "  X: $" << std::setw(2) << static_cast<int>(cpu.X)
+			<< "  Y: $" << std::setw(2) << static_cast<int>(cpu.Y) << '\n';
 
-	cpu.reset();
-	cpu.step();
-	cpu.step();
-	cpu.step();
-
-	std::cout << "Value stored at $0200: $"
-		<< std::hex << std::uppercase << std::setw(2) << std::setfill('0')
-		<< static_cast<int>(bus.bus_read(0x0200)) << '\n';
-	return 0;
+		return result.reason == Executor::StopReason::EndOfProgram ? 0 : 2;
+	} catch (const std::exception& error) {
+		std::cerr << "Executor error: " << error.what() << '\n';
+		return 1;
+	}
 }

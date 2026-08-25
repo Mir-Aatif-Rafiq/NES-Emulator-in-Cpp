@@ -1097,13 +1097,3 @@ u_int8_t CPU6502::XXX() {
 
 
 // reset , interrrupt request, nmi these signals are async and need to be checked.
-
-
-
-
-
-
-void CPU6502::executor(){
-	// Kept for compatibility with the original interface. One call runs one opcode.
-	step();
-}

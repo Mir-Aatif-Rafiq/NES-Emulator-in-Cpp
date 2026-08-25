@@ -3,11 +3,15 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
 #include <vector>
 
 class Bus;
+class Executor;
 
 class CPU6502 {
+	friend class Executor;
+
 	public: 
   	u_int8_t A = 0x00;  // Accumulator
   	u_int8_t X = 0x00;
@@ -234,11 +238,6 @@ class CPU6502 {
     u_int16_t abs_addr_fetched = 0x0000;
     u_int16_t rel_addr_fetched = 0x0000;
     u_int8_t opcode = 0x00;
-
-
-  public:
-    void executor();
-
 };
 
 /*
