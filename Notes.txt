@@ -1,0 +1,174 @@
+
+
+there are two ways i can make the 6502 emulator work :
+
+(1) by keeping the opcodes as hex codes : and by using hex code 
+		i dont have to worry about the addressing mode of each instruction.
+
+(2) or by keeping the assembly as strings but than i need addressing modes
+		to parse properly.	
+
+(3)  LDA $31F6 is stored as three bytes in memory, $AD $F6 $31... low byte is stored first.
+
+
+CPU : 
+	instructions :
+		the thing here is that in 6502 unlike 8085 where the addressing modes where incorporated
+		in the opcode like in the name itself (e.g. LDA, LDI) etc 
+		here its different, in 6502 the name is same for different Addressind modes
+		but still it will be different when opcode is represented in HEX notation.
+		we know that there is a 16 x 16 matrix which represent total opcodes.
+
+		now theres one thing , first we will definitely make a emulator for 6502
+		before NES and our Goal is to make the 6502 emulator work perfectly seperate
+		as its own project which will be able to run programs written for 6502
+		which means it has its own parser and aseembler
+
+		APPRAOCH : now we can approach it in two ways:
+								 
+					(1) first is to keep it simple and let the opcodes be written in 
+					hex notation and let the emulator parse them directly like we did
+					in LAB ( meaning no need to worry about figuiring out addressing mode)
+
+					(2) keep the programs as it is in english and make a parser for them
+					which will then require addressing modes too 
+					BUT this one will be the right way to proceede as eventually the games 
+					of NES will be coded that way so yeah 
+
+
+		PARSER APPRAOCH : we make the functions for only
+											56 opcodes and then keep the arguments for 
+											that function for the max arguments that 
+											that specific opcodes can have 
+											and keep the default value like -1 
+											if its the other addressing mode.
+
+
+
+Q: Basic computer operation question but I'm not sure how to ask it. 
+When we say that a computer has an instruction set, how does the 
+computer know what that set is? Is it stored in a ROM chip? Is 
+it stored in the CPU somewhere? Where did the manufacturer put 
+it so that it can read a disk and start processing machine code?
+
+
+ANS : The instruction set is hardwired into the CPU... 
+	It's actually a result of the way the circuit is built, there isn't an actual
+	space where the instructions are kept.
+
+	When a computer starts, there's a small program on a ROM that knows how to 
+	initialize all the components and boot the OS. Because of the way a computer
+	is built, this program is the first to run.
+
+	Instruction set
+
+	An instruction set is the set of machine code instructions that the CPU is
+	built to handle. The CPU doesn't have to load it from anywhere, it's built-in
+	to the CPU itself. Examples of instruction sets are: Intel x86, MIPS.
+
+
+	Boot loader
+
+	The boot loader is a small program that tells the CPU how to get the computer 
+	started. Obviously it's written using the CPU instruction set, and usually 
+	resides in ROM or EEPROM or something. It tells the CPU how to interface 
+	with the disk to load a boot sector (which then loads more of 
+	the operating system). On a PC, the boot loader is part of the BIOS.
+
+
+
+APPRAOCH on handling INSTRUCTIONS :  
+			what we decided finally is that having seperate classes for addressing modes 
+			and opcodes is bad bc they are a part of CPU itself so they should belong inside
+			the CPU6502 class itself. and it also saved us with a lot of bad passing of references
+			of objects of the classes for example passing CPU6502 object to Instruction 
+			so it can access PC register and upgrade the same PC register 
+			
+			Inheritance was also a bad idea bc it wouldve been wrong in the first place
+			like what does it even mean that AddressingModes class is inheriting from CPU
+			
+			plus lets just assume we even went on with it, then we had to make the member 
+			variable (like registers etc) of CPU6502 class ' STATIC ' so that they 
+			could be only inititated once and regardless of how many derived class objects 
+			are made it will only update the same base class varibale.
+
+			so the optimal thing to do is to put the addressing modes and opcodes inside
+			the CPU6502 class along with nested INSTRUCTIONS class.
+
+INSTRUCTION CLASS : instruction class hold the name of the instruction along with the 
+					with the function pointers of opcode funcs and addr mode funcs 
+					so we can create a std::vector<instructions> (256) having all the
+					combinations of opcodes and addr modes.
+
+
+AddressingModes : The clock cycles mentioned for each addressing mode on the 6502 CPU
+ represent the total time required to execute the entire instruction, including:
+
+    Opcode Fetch: The CPU fetches the instruction's opcode from memory.
+    Operand Fetch: If needed, the CPU fetches the operand(s)
+		 (e.g., immediate value, memory address).
+    Address Calculation: If the instruction uses an addressing mode that involves 
+		calculating an effective address (like adding a register to a base address), 
+		this is included.Memory Access: The CPU reads from or writes to memory if 
+		required by the instruction (e.g., loading data into a 
+		register, storing data from a register).
+
+Behind the Scenes Breakdown:
+
+    Cycle 1: Fetch the opcode (always happens).
+    Cycle 2+: Depending on the addressing mode, fetch operand(s) and 
+							calculate the effective address.
+    Final Cycles: Perform the operation, potentially reading from 
+								or writing to memory.
+
+Example (LDA $1234,X with Page Cross):
+
+    Cycle 1: Fetch opcode (LDA).
+    Cycle 2-3: Fetch address $1234 and add X to it.
+    Cycle 4: Access the calculated address, but if the address crosses a 
+		page boundary, an additional cycle is needed to correct the address.
+
+BUGS in addressing modes : 
+	there are some bugs or work around in addressing modes in 6502
+	like if in zero page addressing mode where X,Y register is added to offest
+	if it crosses the 0xFF boundary . it doesnt go into the next page 
+	it wrap arounds in the zeroth page to save one clock cycle.
+
+	another one is indirect mode where the lo byte of the pointed address
+	is on some page with offest at 0xFF which means the hi byte is on the next 
+	page , but it also doesnt happen it also wraps around in the same page
+
+Question:
+
+Why does crossing a page boundary in certain addressing modes (e.g., Absolute,X)
+result in an extra clock cycle, while crossing a page boundary during normal 
+program execution does not?
+
+Answer:
+
+When the program counter (PC) crosses a page boundary(sequential fetch), the CPU simply 
+fetches the next sequential byte without extra cycles. However, in addressing modes 
+involving index registers (like Absolute,X),(Effective Address Calculation) if the addition 
+of the index to the base address causes a page boundary crossing, the CPU incurs 
+an extra cycle to correct the effective address. The extra cycle is due to the overhead of 
+handling the carry-over in the address calculation.
+
+Question :
+
+How would we know even after addressing mode function runs, now opcode fucntion has to run
+how would it know still that what to do with the operand, should it have multiple
+switch cases inside (e.g. AND (){} should have switch cases for IMM IND etc)?
+
+ANSWER :
+
+No, we dont have to take care of that. Regardless of whatever is the addressing mode
+the opcode only cares about what it wants like in AND it only cares about data fetched
+and it will be provided by all the ADDRESSING MODES to it , the most updted one
+bc the executor will always run the addr mode func first and then the opcode func.
+
+
+
+OPCODE : PHP() =  When an interrupt occurs, and the status register is pushed onto the stack,
+ 									the B flag is set to 1 if the interrupt was caused by a BRK instruction, 
+									 and to 0 if it was a hardware interrupt.
+
